@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">KoggerSonic</string>
+    <string name="header_baudrate_bps">Baudrate, bps:</string>
+</resources>

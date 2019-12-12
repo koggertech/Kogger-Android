@@ -1,0 +1,801 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <LinearLayout
+        android:id="@+id/chart_layout"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:orientation="horizontal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0">
+
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginBottom="8dp"
+        android:background="#26000000"
+        android:text="KOGGER"
+        android:textColor="#4D00BCD4"
+        app:layout_constraintBottom_toBottomOf="@+id/chart_layout"
+        app:layout_constraintStart_toStartOf="@+id/chart_layout" />
+
+    <TextView
+        android:id="@+id/info_text"
+        android:layout_width="wrap_content"
+        android:layout_height="19dp"
+        android:layout_marginStart="8dp"
+        android:text="Data"
+        android:textColor="#80FC1E1E"
+        app:layout_constraintBottom_toTopOf="@+id/textView3"
+        app:layout_constraintStart_toStartOf="@+id/chart_layout" />
+
+    <ToggleButton
+        android:id="@+id/tb_show_connection"
+        android:layout_width="60dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="10dp"
+        android:background="#B3FFF8E1"
+        android:textAlignment="center"
+        android:textColor="#E600140A"
+        android:textOff="CONN"
+        android:textOn="CONN"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintStart_toStartOf="@+id/chart_layout"
+        app:layout_constraintTop_toTopOf="@+id/chart_layout" />
+
+    <ToggleButton
+        android:id="@+id/tb_show_menu"
+        android:layout_width="60dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="2dp"
+        android:background="#B3FFF8E1"
+        android:textAlignment="center"
+        android:textColor="#E600140A"
+        android:textOff="SET"
+        android:textOn="SET"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/tb_show_connection" />
+
+    <ToggleButton
+        android:id="@+id/tb_show_disp"
+        android:layout_width="60dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="2dp"
+        android:background="#B3FFF8E1"
+        android:textAlignment="center"
+        android:textColor="#E600140A"
+        android:textOff="DISP"
+        android:textOn="DISP"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/tb_show_menu" />
+
+    <ToggleButton
+        android:id="@+id/tb_show_general"
+        android:layout_width="60dp"
+        android:layout_height="45dp"
+        android:layout_marginTop="2dp"
+        android:background="#B3FFF8E1"
+        android:textAlignment="center"
+        android:textColor="#E600140A"
+        android:textOff="GEN"
+        android:textOn="GEN"
+        android:textSize="12sp"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@+id/tb_show_disp" />
+
+    <ScrollView
+        android:id="@+id/sv_connection"
+        android:layout_width="@dimen/MENU_WIDTH"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="#B3FFF8E1"
+        android:scrollbarStyle="insideInset"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@+id/chart_layout"
+        app:layout_constraintStart_toEndOf="@+id/tb_show_menu"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_baudrate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="@string/header_baudrate_bps"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_baudrate"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="7"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#00695C"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider2"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_settings_rule"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Settings rule"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" >
+
+                <RadioButton
+                    android:id="@+id/rb_dev_master"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:checked="true"
+                    android:text="Copy from device"
+                    android:textColor="#E600140A"/>
+
+                <RadioButton
+                    android:id="@+id/rb_dev_slave"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:textColor="#E600140A"
+                    android:text="Copy to device"/>
+            </RadioGroup>
+
+            <View
+                android:id="@+id/divider20"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+
+            <ToggleButton
+                android:id="@+id/tb_flash"
+                android:layout_width="match_parent"
+                android:layout_height="45dp"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="5dp"
+                android:layout_marginBottom="10dp"
+                android:background="#B3FFF8E1"
+                android:textAlignment="center"
+                android:textColor="#E600140A"
+                android:textOff="Write to Flash"
+                android:textOn="Flashing..."
+                android:textSize="12sp" />
+
+            <ToggleButton
+                android:id="@+id/tb_restore"
+                android:layout_width="match_parent"
+                android:layout_height="45dp"
+                android:layout_marginLeft="5dp"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="5dp"
+                android:layout_marginBottom="10dp"
+                android:background="#B3FFF8E1"
+                android:textAlignment="center"
+                android:textColor="#E600140A"
+                android:textOff="Restore"
+                android:textOn="Restoring..."
+                android:textSize="12sp"/>
+
+            <View
+                android:id="@+id/divider21"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <ScrollView
+        android:id="@+id/sv_menu"
+        android:layout_width="@dimen/MENU_WIDTH"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="#B3FFF8E1"
+        android:scrollbarStyle="insideInset"
+        android:visibility="invisible"
+        app:layout_constraintBottom_toBottomOf="@+id/chart_layout"
+        app:layout_constraintStart_toEndOf="@+id/tb_show_menu"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_itemchart"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Item chart:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_itemchart"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="9"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+
+            <TextView
+                android:id="@+id/tv_range"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Range:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_range"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="9"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider4"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+
+            <TextView
+                android:id="@+id/tv_period"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Period, ms:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_period"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="10"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider3"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_freq"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Freq. kHz:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_freq"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="62"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider6"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+
+            <TextView
+                android:id="@+id/tv_width"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Pulse width"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_width"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="25"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider7"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+
+            <Switch
+                android:id="@+id/sw_boost"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Boost"
+                android:textColor="#E600140A"
+                android:textSize="16sp"
+                android:thumbTint="#00695C" />
+
+            <View
+                android:id="@+id/divider5"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_spd_sound"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Sound speed"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_spd_sound"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider27"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+        </LinearLayout>
+    </ScrollView>
+
+    <ScrollView
+        android:id="@+id/sv_display"
+        android:layout_width="@dimen/MENU_WIDTH"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="#B3FFF8E1"
+        android:scrollbarStyle="insideInset"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@+id/chart_layout"
+        app:layout_constraintStart_toEndOf="@+id/tb_show_menu"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/tv_min_amp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Min. value, dB:"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_min_amp"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#00695C"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider10"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_max_amp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Max. value, dB:"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <SeekBar
+                android:id="@+id/sb_max_amp"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="100"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#00695C"
+                app:tickMarkTintMode="multiply" />
+
+            <View
+                android:id="@+id/divider11"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_color_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Color scheme"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <RadioGroup
+                android:id="@+id/rg_plot_color"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <RadioButton
+                    android:id="@+id/rb_color_blue"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:checked="true"
+                    android:text="Blue"
+                    android:textColor="#E600140A" />
+
+                <RadioButton
+                    android:id="@+id/rb_color_sepia"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:text="Sepia"
+                    android:textColor="#E600140A" />
+
+                <RadioButton
+                    android:id="@+id/rb_color_rainbow"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:text="Rainbow"
+                    android:textColor="#E600140A" />
+            </RadioGroup>
+
+            <View
+                android:id="@+id/divider12"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+            <TextView
+                android:id="@+id/tv_cursor_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Cursor mode"
+                android:textAlignment="viewStart"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <RadioGroup
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" >
+
+                <RadioButton
+                    android:id="@+id/rb_cursor_off"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:checked="true"
+                    android:text="Off"
+                    android:textColor="#E600140A"/>
+
+                <RadioButton
+                    android:id="@+id/rb_cursor_manual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:textColor="#E600140A"
+                    android:text="Manual"/>
+
+                <RadioButton
+                    android:id="@+id/rb_cursor_bottom"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:buttonTint="#00695C"
+                    android:textColor="#E600140A"
+                    android:text="Bottom"/>
+            </RadioGroup>
+
+
+            <View
+                android:id="@+id/divider13"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider"
+                android:padding="3dp" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <ScrollView
+        android:id="@+id/sv_general"
+        android:layout_width="@dimen/MENU_WIDTH"
+        android:layout_height="0dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:background="#B3FFF8E1"
+        android:scrollbarStyle="insideInset"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="@+id/chart_layout"
+        app:layout_constraintStart_toEndOf="@+id/tb_show_menu"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="5dp">
+
+            <Switch
+                android:id="@+id/sw_log"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Logging"
+                android:textColor="#E600140A"
+                android:textSize="16sp"
+                android:thumbTint="#00695C" />
+
+            <Switch
+                android:id="@+id/sw_screen_on"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="Always on"
+                android:textColor="#E600140A"
+                android:textSize="16sp"
+                android:thumbTint="#00695C" />
+
+            <Switch
+                android:id="@+id/sw_gnss"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="5dp"
+                android:text="GNSS"
+                android:textColor="#E600140A"
+                android:textSize="16sp"
+                android:thumbTint="#00695C" />
+
+        </LinearLayout>
+    </ScrollView>
+
+</android.support.constraint.ConstraintLayout>
