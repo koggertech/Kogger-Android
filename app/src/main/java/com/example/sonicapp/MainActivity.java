@@ -5,7 +5,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
-import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -17,20 +18,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
 import android.widget.CompoundButton;
-import android.widget.EditText;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
@@ -39,12 +32,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.lang.ref.WeakReference;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.Set;
 
 import android.content.SharedPreferences;
@@ -68,31 +55,25 @@ public class MainActivity extends AppCompatActivity {
     ToggleButton TB_GeneralMenu;
     ScrollView MenuGeneral;
 
-
-    TextView TV_Baudrate;
-    SeekBar SB_Baudrate;
+    CustomSeekBar SB_Baudrate;
 
     ToggleButton TB_WriteFlash;
+    ToggleButton TB_Restore;
+    ToggleButton TB_Update;
 
-    TextView TV_ItemChart;
-    SeekBar SB_ItemChart;
+    CustomSeekBar SB_SamplesCount;
+    CustomSeekBar SB_Range;
 
-    TextView TV_Range;
-    SeekBar SB_Range;
-
-    TextView TV_Period;
-    SeekBar SB_Period;
-
-    TextView TV_Freq;
-    SeekBar SB_Freq;
-
-    TextView TV_Width;
-    SeekBar SB_Width;
-
+    CustomSeekBar SB_Freq;
+    CustomSeekBar SB_Width;
     Switch SW_Boost;
+    CustomSeekBar SB_SoundSpeed;
 
-    TextView TV_SoundSpeed;
-    SeekBar SB_SoundSpeed;
+    CustomSeekBar SB_Period;
+    Switch SW_DatasetChart;
+    Switch SW_DatasetAttQuat;
+    Switch SW_DatasetSimpleDist;
+    Switch SW_DatasetDistNMEA;
 
     TextView TV_DispMinThr;
     SeekBar SB_DispMinThr;
@@ -106,7 +87,9 @@ public class MainActivity extends AppCompatActivity {
 
     RadioGroup RG_PlotColor;
 
-    Serial serial;
+    SerialUSB serial;
+
+
 
     public static final String APP_PREFERENCES = "settings_global";
     public static final String APP_PREFERENCES_BAUDRATE = "BAUDRATE";
@@ -114,6 +97,15 @@ public class MainActivity extends AppCompatActivity {
     public static final String APP_PREFERENCES_KEEP_SCREEN = "KEEP_SCREEN";
     public static final String APP_PREFERENCES_USE_GNSS = "USE_GNSS";
     private SharedPreferences mSettings;
+
+    // 0x[ID][VER]
+    private static final int INTERFACE_RECEIVE_DATASET_V0 = 0x1000;
+    private static final int INTERFACE_RECEIVE_DIST_SETUP_V0 = 0x1100;
+    private static final int INTERFACE_RECEIVE_CHART_SETUP_V0 = 0x1200;
+    private static final int INTERFACE_RECEIVE_DSP_V0 = 0x1300;
+    private static final int INTERFACE_RECEIVE_TRANSC_V0 = 0x1400;
+    private static final int INTERFACE_RECEIVE_SND_SPD_V0 = 0x1500;
+    private static final int INTERFACE_RECEIVE_UART_V0 = 0x1800;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -134,11 +126,95 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout linearLayout = findViewById(R.id.chart_layout);
         surfaceView = new TimeChartView(this, linearLayout);
 
-        serial = new Serial();
+        serial = new SerialUSB();
 
         DeviceDriver = new KS_DriverExample_c();
         DeviceDriver.SetPort(serial);
-        DeviceDriver.VTimeChart = surfaceView;
+
+        InfoHandler_Box = new InfoHandler();
+
+        DeviceDriver.SetListenerChart(new KoggerSonicBaseDriver_c.InterfaceListenerChart() {
+            @Override
+            public void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data) {
+
+                int[] val_chart = new int[count_samples];
+                for (int i = 0; i < count_samples; i++) {
+                    val_chart[i] = data[i];
+                }
+
+                surfaceView.Waterfall.PushData(val_chart, resolution_mm, (int)offset_mm);
+//                surfaceView.Waterfall2.PushData(val_chart, resolution_mm, (int)offset_mm);
+            }
+
+            @Override
+            public void ReceiveNew() {
+            }
+
+            @Override
+            public void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples) {
+                InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_CHART_SETUP_V0, null).sendToTarget();
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+            }
+        });
+
+
+        DeviceDriver.SetListenerDataset(new KoggerSonicBaseDriver_c.InterfaceListenerDataset() {
+            @Override
+            public void ReceiveSetting() {
+                InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_DATASET_V0, null).sendToTarget();
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        DeviceDriver.SetListenerTransc(new KoggerSonicBaseDriver_c.InterfaceListenerTransc() {
+            @Override
+            public void ReceiveSetting() {
+                InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_TRANSC_V0, null).sendToTarget();
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        DeviceDriver.SetListenerSound(new KoggerSonicBaseDriver_c.InterfaceListenerSound() {
+            @Override
+            public void ReceiveSetting() {
+                InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_SND_SPD_V0, null).sendToTarget();
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        DeviceDriver.SetListenerAttitude(new KoggerSonicBaseDriver_c.InterfaceListenerAttitude() {
+            public void ReceiveYPR(float ypr[]){
+                TextInfo = findViewById(R.id.info_text);
+                String t = new String();
+                t = "Y: " + String.format("%.2f", ypr[0]) + "; ";
+                t += "P: " + String.format("%.2f", ypr[1]) + "; ";
+                t += "R: " + String.format("%.2f", ypr[2]) + "; ";
+
+                InfoHandler_Box.obtainMessage(1, t.getBytes()).sendToTarget();
+            }
+
+            public void ReceiveQuat(float[] q){
+
+            }
+            public void ReceiveResponse(int code){
+
+            }
+        });
 
 
         MenuConnection = findViewById(R.id.sv_connection);
@@ -279,51 +355,27 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        SB_Baudrate =  findViewById(R.id.sb_baudrate);
-        TV_Baudrate =  findViewById(R.id.tv_baudrate);
-        SB_Baudrate.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        SB_Baudrate = findViewById(R.id.sb_baudrate);
+        SB_Baudrate.TextV = findViewById(R.id.tv_baudrate);
+        SB_Baudrate.StartText = "Baudrate, bps: ";
+        SB_Baudrate.CaseValues = new int[]{9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600};
+        SB_Baudrate.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                String t = new String();
-                t = "Baudrate, bps: ";
-
-                DeviceDriver.GUI_SetBaudrateByIndex(progress);
-                DeviceDriver.GUI_UARTSend();
-                DeviceDriver.GUI_UARTSend();
-                DeviceDriver.GUI_UARTSend();
-                DeviceDriver.GUI_UARTSend();
-                DeviceDriver.GUI_UARTSend();
-                DeviceDriver.GUI_UARTSend();
-
-                t += DeviceDriver.GUI_GetBaudrate();
-
-                //long time = System.currentTimeMillis()%(1000000000);
-                //t = String.valueOf(time);
-
-                TV_Baudrate.setText(t);
-
+            public void Update(int value) {
+                DeviceDriver.Data.UART.Baudrate = value;
+                DeviceDriver.SendUART();
                 if(usbService != null) {
-                    usbService.SetBaudrate(DeviceDriver.GUI_GetBaudrate());
+                    usbService.SetBaudrate((int)DeviceDriver.Data.UART.Baudrate);
                 }
             }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-            }
         });
-        SB_Baudrate.setProgress(4);
+        SB_Baudrate.setValue(115200);
 
         TB_WriteFlash = findViewById(R.id.tb_flash);
         TB_WriteFlash.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                DisplayMetrics displayMetrics = getBaseContext().getResources().getDisplayMetrics();
-
                 if (isChecked) {
-                    DeviceDriver.FlashAllSatting();
+                    DeviceDriver.SaveAllSettings();
                     buttonView.setChecked(false);
                 } else {
 
@@ -332,181 +384,168 @@ public class MainActivity extends AppCompatActivity {
         });
         TB_WriteFlash.setChecked(false);
 
+        TB_Restore = findViewById(R.id.tb_restore);
+        TB_Restore.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    DeviceDriver.RestoreAllSettings();
+                    buttonView.setChecked(false);
+                } else {
+                }
+            }
+        });
+        TB_Restore.setChecked(false);
 
-        SB_ItemChart =  findViewById(R.id.sb_itemchart);
-        TV_ItemChart =  findViewById(R.id.tv_itemchart);
+        TB_Update = findViewById(R.id.tb_update);
+        TB_Update.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                if (isChecked) {
+                    DeviceDriver.FirmwareUpdate();
+                    buttonView.setChecked(false);
+                } else {
+                }
+            }
+        });
+        TB_Update.setChecked(false);
 
-        SB_Range =  findViewById(R.id.sb_range);
-        TV_Range =  findViewById(R.id.tv_range);
-
-        SB_Period =  findViewById(R.id.sb_period);
-        TV_Period =  findViewById(R.id.tv_period);
 
         SB_Freq =  findViewById(R.id.sb_freq);
-        TV_Freq =  findViewById(R.id.tv_freq);
-
         SB_Width =  findViewById(R.id.sb_width);
-        TV_Width =  findViewById(R.id.tv_width);
-
         SW_Boost = findViewById(R.id.sw_boost);
-
         SB_SoundSpeed =  findViewById(R.id.sb_spd_sound);
-        TV_SoundSpeed =  findViewById(R.id.tv_spd_sound);
+        SB_Period =  findViewById(R.id.sb_period);
 
-        SB_ItemChart.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        SB_SamplesCount = findViewById(R.id.sb_itemchart);
+        SB_SamplesCount.TextV = findViewById(R.id.tv_itemchart);
+        SB_SamplesCount.StartText = "Samples: ";
+        SB_SamplesCount.SetCaseValues(new int[]{100, 150, 300, 500, 800, 1000, 1500, 3000, 4000, 5000});
+        SB_SamplesCount.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetItemChartCountByIndex(progress);
-
-                String t = new String();
-                t = "Samples: ";
-                t += DeviceDriver.GUI_GetItemChartCount();
-                TV_ItemChart.setText(t);
-
-                t = "Range, m: ";
-                t += (float)DeviceDriver.GUI_GetRange()/1000.0f;
-                TV_Range.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataChartSend();
+            public void Update(int value) {
+                DeviceDriver.Data.Chart.SetSize(value);
+                SB_Range.setValue(DeviceDriver.Data.Chart.GetResol());
+                DeviceDriver.SendChartSetup();
             }
         });
-        SB_ItemChart.setProgress(4);
+        SB_SamplesCount.setValue(100);
 
-        SB_Range.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        SB_Range = findViewById(R.id.sb_range);
+        SB_Range.TextV = findViewById(R.id.tv_range);
+        SB_Range.StartText = "Resol., mm: ";
+        SB_Range.SetCaseValues(new int[]{10, 20, 30, 40, 50, 60, 70, 80, 90, 100});
+        SB_Range.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetRangeByIndex(progress);
-
-                String t = new String();
-                t = "Range, m: ";
-                t += (float)DeviceDriver.GUI_GetRange()/1000.0f;
-                TV_Range.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                //DeviceDriver.SetChart();
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataChartSend();
+            public void Update(int value) {
+                DeviceDriver.Data.Chart.SetResol(value);
+                SB_Range.setValue(DeviceDriver.Data.Chart.GetResol());
+                DeviceDriver.SendChartSetup();
             }
         });
-        SB_Range.setProgress(4);
+        SB_Range.setValue(10);
 
-        SB_Period.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+
+        SB_Freq = findViewById(R.id.sb_freq);
+        SB_Freq.TextV = findViewById(R.id.tv_freq);
+        SB_Freq.StartText = "Freq., kHz: ";
+        SB_Freq.SetCaseValues(new int[]{200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620, 630, 640, 650, 660, 670, 680, 690, 700, 710, 720, 730, 740, 750, 760, 770, 780, 790, 800});
+        SB_Freq.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetPeriodByIndex(progress);
-
-                String t = new String();
-                t = "Period, ms: ";
-                t += (float)DeviceDriver.GUI_GetPeriod();
-                TV_Period.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataChartSend();
+            public void Update(int value) {
+                DeviceDriver.Data.Transc.SetFreq(value);
+                DeviceDriver.SendTransc();
             }
         });
-        SB_Period.setProgress(4);
+        SB_Freq.setValue(700);
 
-        SB_Freq.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        SB_Width = findViewById(R.id.sb_width);
+        SB_Width.TextV = findViewById(R.id.tv_width);
+        SB_Width.StartText = "Pulse Width: ";
+        SB_Width.SetCaseValues(new int[]{0, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50});
+        SB_Width.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetFreqByIndex(progress);
-
-                String t = new String();
-                t = "Freq., kHz: ";
-                t += (float)DeviceDriver.GUI_GetFreq();
-                TV_Freq.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataTranscSend();
+            public void Update(int value) {
+                DeviceDriver.Data.Transc.SetWidth(value);
+                DeviceDriver.SendTransc();
             }
         });
-        SB_Freq.setProgress(52);
-
-        SB_Width.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetWidthByIndex(progress);
-
-                String t = new String();
-                t = "Pulse Width: ";
-                t += (float)DeviceDriver.GUI_GetWidth();
-                TV_Width.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataTranscSend();
-            }
-        });
-        SB_Width.setProgress(5);
+        SB_Width.setValue(10);
 
         SW_Boost.setChecked(true);
         SW_Boost.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 if(isChecked) {
-                    DeviceDriver.GUI_SetBoostByIndex(1);
+                    DeviceDriver.Data.Transc.SetBoost(1);
                 } else {
-                    DeviceDriver.GUI_SetBoostByIndex(0);
+                    DeviceDriver.Data.Transc.SetBoost(0);
                 }
-                DeviceDriver.GUI_DataTranscSend();
+                DeviceDriver.SendTransc();
             }
         });
         SW_Boost.setChecked(false);
 
-        SB_SoundSpeed.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+        SB_SoundSpeed = findViewById(R.id.sb_spd_sound);
+        SB_SoundSpeed.TextV = findViewById(R.id.tv_spd_sound);
+        SB_SoundSpeed.StartText = "Sound speed, m/s: ";
+        SB_SoundSpeed.SetCaseValues(new int[]{1400,  1405,  1410,  1415,  1420,  1425,  1430,  1435,  1440,  1445,  1450,  1455,  1460,  1465,  1470,  1475,  1480,  1485,  1490,  1495,  1500,  1505,  1510,  1515,  1520,  1525,  1530,  1535,  1540,  1545,  1550,  1555,  1560,  1565,  1570,  1575,  1580,  1585,  1590,  1595});
+        SB_SoundSpeed.setListenerUpdate(new ListenerControlUpdate() {
             @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                DeviceDriver.GUI_SetSoundSpeedByIndex(progress, 0);
-
-                String t = new String();
-                t = "Sound speed: ";
-                t += (float)DeviceDriver.GUI_GetSoundSpeed();
-                TV_SoundSpeed.setText(t);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.GUI_DataSoundSpeedSend();
+            public void Update(int value) {
+                DeviceDriver.Data.SoundSpeed_m_s = value;
+                DeviceDriver.SendSoundSpeed();
             }
         });
-        SB_SoundSpeed.setProgress(60);
+        SB_SoundSpeed.setValue(1500);
+
+        SB_Period = findViewById(R.id.sb_period);
+        SB_Period.TextV = findViewById(R.id.tv_period);
+        SB_Period.StartText = "Period, ms: ";
+        SB_Period.SetCaseValues(new int[]{0,  10,  20,  50,  100,  200,  500,  1000,  2000});
+        SB_Period.setListenerUpdate(new ListenerControlUpdate() {
+            @Override
+            public void Update(int value) {
+                DeviceDriver.Data.Channel.setPeriod(value);
+                DeviceDriver.SendChannel();
+            }
+        });
+        SB_Period.setValue(100);
+
+
+        SW_DatasetChart = findViewById(R.id.sw_send_chart_v0);
+        SW_DatasetChart.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                DeviceDriver.Data.Channel.setChart(isChecked);
+                DeviceDriver.SendChannel();
+            }
+        });
+
+        SW_DatasetAttQuat = findViewById(R.id.sw_send_quat);
+        SW_DatasetAttQuat.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                DeviceDriver.Data.Channel.setQuat(isChecked);
+                DeviceDriver.SendChannel();
+            }
+        });
+
+        SW_DatasetSimpleDist = findViewById(R.id.sw_send_dist_v0);
+        SW_DatasetSimpleDist.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                DeviceDriver.Data.Channel.setDist(isChecked);
+                DeviceDriver.SendChannel();
+            }
+        });
+
+        SW_DatasetDistNMEA = findViewById(R.id.sw_send_dist_nmea);
+        SW_DatasetDistNMEA.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                DeviceDriver.Data.Channel.setDistNMEA(isChecked);
+                DeviceDriver.SendChannel();
+            }
+        });
 
 
         SB_DispMinThr=  findViewById(R.id.sb_min_amp);
@@ -537,8 +576,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.VTimeChart.Waterfall.SetMinThr(SB_DispMinThr.getProgress()*5/2);
-                DeviceDriver.VTimeChart.Waterfall.SetMaxThr(SB_DispMaxThr.getProgress()*5/2);
+                surfaceView.Waterfall.SetMinThr(SB_DispMinThr.getProgress()*5/2);
+                surfaceView.Waterfall.SetMaxThr(SB_DispMaxThr.getProgress()*5/2);
             }
         });
         SB_DispMinThr.setProgress(10);
@@ -567,8 +606,8 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
-                DeviceDriver.VTimeChart.Waterfall.SetMinThr(SB_DispMinThr.getProgress()*5/2);
-                DeviceDriver.VTimeChart.Waterfall.SetMaxThr(SB_DispMaxThr.getProgress()*5/2);
+                surfaceView.Waterfall.SetMinThr(SB_DispMinThr.getProgress()*5/2);
+                surfaceView.Waterfall.SetMaxThr(SB_DispMaxThr.getProgress()*5/2);
             }
         });
         SB_DispMaxThr.setProgress(100);
@@ -582,15 +621,15 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case R.id.rb_color_blue:
-                        DeviceDriver.VTimeChart.Waterfall.SetColorScheme(0);
+                        surfaceView.Waterfall.SetColorScheme(0);
                         break;
 
                     case R.id.rb_color_sepia:
-                        DeviceDriver.VTimeChart.Waterfall.SetColorScheme(1);
+                        surfaceView.Waterfall.SetColorScheme(1);
                         break;
 
                     case R.id.rb_color_rainbow:
-                        DeviceDriver.VTimeChart.Waterfall.SetColorScheme(2);
+                        surfaceView.Waterfall.SetColorScheme(2);
                         break;
 
                     default:
@@ -634,29 +673,50 @@ public class MainActivity extends AppCompatActivity {
                         locationManager.removeUpdates(locationListener);
                     }
                 }
-
             }
         });
-
-
-
-
-        /*byte data[] = new byte[7];
-        data[0] = (byte)0xbb;
-        data[1] = (byte)0x55;
-        data[2] = (byte)0x0;
-        data[3] = (byte)0x0;
-        data[4] = (byte)0x0;
-        data[5] = (byte)0x0;
-        data[6] = (byte)0x0;
-        //Driver.Input.Port.buf.put(data);
-        DeviceDriver.Input.Port.addData(data);
-        DeviceDriver.Process();*/
-
-        TextInfo = findViewById(R.id.info_text);
-
-        mHandler = DeviceDriver.DataIn;
     }
+
+    private class InfoHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            String t = new String();
+            switch (msg.what) {
+                case 1:
+                    byte data[] = (byte[]) msg.obj;
+                    TextInfo.setText(new String(data));
+                    break;
+
+                case INTERFACE_RECEIVE_DATASET_V0:
+                    SB_Period.setValue(DeviceDriver.Data.Channel.getPeriod());
+                    SW_DatasetChart.setChecked(DeviceDriver.Data.Channel.getChart());
+                    SW_DatasetAttQuat.setChecked(DeviceDriver.Data.Channel.getQuat());
+                    SW_DatasetSimpleDist.setChecked(DeviceDriver.Data.Channel.getDist());
+                    SW_DatasetDistNMEA.setChecked(DeviceDriver.Data.Channel.getNMEA());
+                    break;
+
+                case INTERFACE_RECEIVE_CHART_SETUP_V0:
+                    SB_SamplesCount.setValue(DeviceDriver.Data.Chart.GetSize());
+                    SB_Range.setValue(DeviceDriver.Data.Chart.GetResol());
+                    break;
+
+                case INTERFACE_RECEIVE_TRANSC_V0:
+                    SB_Freq.setValue(DeviceDriver.Data.Transc.GetFreq());
+                    SB_Width.setValue(DeviceDriver.Data.Transc.GetWidth());
+                    SW_Boost.setChecked(DeviceDriver.Data.Transc.GetBoost() > 0);
+                    break;
+
+                case INTERFACE_RECEIVE_SND_SPD_V0:
+                    SB_SoundSpeed.setValue(DeviceDriver.Data.SoundSpeed_m_s);
+                    break;
+
+                case INTERFACE_RECEIVE_UART_V0:
+                    break;
+            }
+        }
+    }
+
+    InfoHandler InfoHandler_Box;
 
     /*
      * Notifications from UsbService will be received here.
@@ -685,13 +745,12 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private UsbService usbService;
-    private Handler mHandler;
     private final ServiceConnection usbConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName arg0, IBinder arg1) {
             usbService = ((UsbService.UsbBinder) arg1).getService();
-            usbService.setHandler(mHandler);
-            usbService.SetBaudrate(DeviceDriver.GUI_GetBaudrate());
+            usbService.setHandler(serial.Handler);
+            usbService.SetBaudrate((int)DeviceDriver.Data.UART.Baudrate);
             serial.usbService = usbService;
         }
 
@@ -746,6 +805,8 @@ public class MainActivity extends AppCompatActivity {
         editor.putBoolean(APP_PREFERENCES_KEEP_SCREEN, SW_KeepScreen.isChecked());
         editor.putBoolean(APP_PREFERENCES_USE_GNSS, SW_GNSS.isChecked());
         editor.apply();
+
+//        surfaceView.stopDrawThread();
     }
 
     private void startService(Class<?> service, ServiceConnection serviceConnection, Bundle extras) {

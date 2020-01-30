@@ -17,14 +17,13 @@ import static java.lang.Math.sqrt;
 class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runnable {
     private SurfaceHolder holder;
     private Thread drawThread;
-    private boolean surfaceReady = false;
     private boolean drawingActive = false;
 
     private static final int MAX_FPS = (int) (30.0);
     private static final int MAX_FRAME_TIME = (int) (1000.0 / MAX_FPS);
 
 
-    WaterfallChart Waterfall;
+    WaterfallChart Waterfall, Waterfall2;
 
     class WaterfallChart {
         class WaterfallLine_c {
@@ -326,13 +325,11 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
 
                 return Color.rgb((int)(r*255.0f), (int)(g*255.0f), (int)(b*255.0f));
             }
-
-
         }
 
         WaterfallLine_c Line[];
 
-        private int SizeX = 0, SizeY = 0, CntLineForCurr, WidthCurr, WidthPlot;
+        private int SizeX = 0, SizeY = 0, PosX, PosY,  CntLineForCurr, WidthCurr, WidthPlot;
         private int TimeCnt = 0;
         private int PrintLineCnt = 0;
         private int data_pos = 0, last_push_index;
@@ -395,13 +392,13 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
                 if (buf_pos < 0) {
                     buf_pos += TimeCnt;
                 }
-                Line[buf_pos].Draw(c, SizeX - (k + CntLineForCurr) * Line[buf_pos].GetWidth(), 0, MinThr, MaxThr, Range_mm, Offset_mm, ColorScheme);
+                Line[buf_pos].Draw(c, PosX + SizeX - (k + CntLineForCurr) * Line[buf_pos].GetWidth(), PosY, MinThr, MaxThr, Range_mm, Offset_mm, ColorScheme);
             }
         }
 
         void DrawLastLine(Canvas c) {
             for (int k = 1; k <= CntLineForCurr; k++) {
-                Line[last_push_index].Draw(c, SizeX - k * Line[last_push_index].GetWidth(), 0, MinThr, MaxThr, Range_mm, Offset_mm, ColorScheme);
+                Line[last_push_index].Draw(c, PosX + SizeX - k * Line[last_push_index].GetWidth(), PosY, MinThr, MaxThr, Range_mm, Offset_mm, ColorScheme);
             }
         }
 
@@ -423,29 +420,29 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
             for (int i = 1; i < nbr_div; i++) {
                 float offset_y = (float)SizeY*(float)i/(float)nbr_div;
                 paint.setAlpha(100);
-                c.drawLine(0, offset_y, SizeX, offset_y, paint);
+                c.drawLine(PosX, PosY + offset_y, PosX + SizeX, PosY + offset_y, paint);
                 String range_text;
                 range_text = "" + (float)(Range_mm*i/nbr_div + Offset_mm)/1000 + " m";
                 paint.setAlpha(170);
-                c.drawText(range_text, SizeX - WidthCurr - 10, offset_y - 10, paint);
+                c.drawText(range_text, PosX + SizeX - WidthCurr - 10, PosY + offset_y - 10, paint);
             }
 
             paint.setAlpha(100);
-            c.drawLine(SizeX - WidthCurr, 0, SizeX - WidthCurr, SizeY, paint);
+            c.drawLine(PosX + SizeX - WidthCurr, PosY, SizeX - WidthCurr, SizeY, paint);
 
-            paint.setAlpha(170);
-            c.drawLine(TouchX, 0, TouchX, TouchY - 10, paint);
-            c.drawLine(TouchX, TouchY + 10, TouchX, SizeY, paint);
-
-            c.drawLine(TouchX - 10, TouchY + 10 - 1, TouchX + 10, TouchY + 10 - 1, paint);
-            c.drawLine(TouchX - 10, TouchY - 10 + 1, TouchX + 10, TouchY - 10 + 1, paint);
-
-            int dist_cursor_cm = (int)(((float)(Range_mm + Offset_mm)/1000.0f)*((float)TouchY/(float)SizeY)*100);
-            String cursor_dist_text;
-            cursor_dist_text = "" + ((float)(dist_cursor_cm)/100) + " m";
-            paint.setAlpha(170);
-            paint.setTextAlign(Paint.Align.LEFT);
-            c.drawText(cursor_dist_text, TouchX + 20, TouchY + 13, paint);
+//            paint.setAlpha(170);
+//            c.drawLine(TouchX, 0, TouchX, TouchY - 10, paint);
+//            c.drawLine(TouchX, TouchY + 10, TouchX, SizeY, paint);
+//
+//            c.drawLine(TouchX - 10, TouchY + 10 - 1, TouchX + 10, TouchY + 10 - 1, paint);
+//            c.drawLine(TouchX - 10, TouchY - 10 + 1, TouchX + 10, TouchY - 10 + 1, paint);
+//
+//            int dist_cursor_cm = (int)(((float)(Range_mm + Offset_mm)/1000.0f)*((float)TouchY/(float)SizeY)*100);
+//            String cursor_dist_text;
+//            cursor_dist_text = "" + ((float)(dist_cursor_cm)/100) + " m";
+//            paint.setAlpha(170);
+//            paint.setTextAlign(Paint.Align.LEFT);
+//            c.drawText(cursor_dist_text, TouchX + 20, TouchY + 13, paint);
 
             paint.setColor(Color.WHITE);
             paint.setAlpha(200);
@@ -454,7 +451,7 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
             String range_text;
             range_text = "" + (float)(Range_mm + Offset_mm)/1000 + " m";
             paint.setTextAlign(Paint.Align.RIGHT);
-            c.drawText(range_text, SizeX - WidthCurr - 10, SizeY - 10, paint);
+            c.drawText(range_text, PosX + SizeX - WidthCurr - 10, PosY + SizeY - 10, paint);
         }
 
         public void PushData(int data[], int resol, int offset) {
@@ -484,20 +481,24 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
 
 
     public void render(Canvas c) {
-//        int data[] = new int[255];
-//        for (int j = 0; j < data.length; j++) {
-//            data[j] = 255 - j;
-//        }
-//        Waterfall.PushData(data, 10, 0);
+        if(c == null) {
+            return;
+        }
         c.drawColor(Color.BLACK);
         Waterfall.Draw(c);
+//        Waterfall2.Draw(c);
     }
 
     public TimeChartView(Context context, LinearLayout linearLayout) {
         super(context);
         getHolder().addCallback(this);
         linearLayout.addView(this);
-        Waterfall = new WaterfallChart(1200, 700, 4);
+        Waterfall = new WaterfallChart(1200, 350, 4);
+        Waterfall.PosY = 0;
+        Waterfall2 = new WaterfallChart(1200, 350, 4);
+        Waterfall2.PosY = Waterfall.SizeY;
+        setWillNotDraw(false);
+        holder = getHolder();
 
         super.setOnTouchListener(new View.OnTouchListener() {
             @Override
@@ -533,60 +534,41 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Waterfall = new WaterfallChart(width, height, 4);
+        Waterfall.PosY = 0;
+//        Waterfall2 = new WaterfallChart(width, height/2, 4);
+//        Waterfall2.PosY = Waterfall.SizeY;
+
+        stopDrawThread();
+        if(holder != null) {
+            startDrawThread();
+        }
     }
 
     @Override
     public void surfaceCreated(SurfaceHolder new_holder) {
-        holder = new_holder;
-
-        if (drawThread != null) {
-            drawingActive = false;
-            try {
-                drawThread.join();
-            } catch (InterruptedException e) {
-            }
-        }
-
-        surfaceReady = true;
-        startDrawThread();
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
-        // Surface is not used anymore - stop the drawing thread
         stopDrawThread();
-        // and release the surface
-        holder.getSurface().release();
-
-        this.holder = null;
-        surfaceReady = false;
     }
 
-
-    /**
-     * Stops the drawing thread
-     */
     public void stopDrawThread() {
         if (drawThread == null) {
-
             return;
         }
+
         drawingActive = false;
-        while (true) {
-            try {
-                drawThread.join(10);
-                break;
-            } catch (Exception e) {
-            }
+        try {
+            drawThread.join();
+        } catch (Exception e) {
         }
+
         drawThread = null;
     }
 
-    /**
-     * Creates a new draw thread and starts it.
-     */
     public void startDrawThread() {
-        if (surfaceReady && drawThread == null) {
+        if(drawThread == null) {
             drawThread = new Thread(this, "Draw thread");
             drawingActive = true;
             drawThread.start();
@@ -594,39 +576,31 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
     }
 
     @Override
+    protected void onDraw(Canvas canvas)  {
+        super.onDraw(canvas);
+        render(canvas);
+    }
+
+    @Override
     public void run() {
-        long frameStartTime;
-        long frameTime;
-
+        Canvas canvas = null;
         while (drawingActive) {
-            if (holder == null) {
-                return;
-            }
-
-            frameStartTime = System.nanoTime();
-            Canvas canvas = holder.lockCanvas();
-            if (canvas != null) {
-                try {
+            canvas = null;
+            try {
+                canvas = holder.lockCanvas();
+                if (canvas != null) {
                     synchronized (holder) {
-                        render(canvas);
+                        postInvalidate();
                     }
-                } finally {
-
-                    holder.unlockCanvasAndPost(canvas);
                 }
             }
-
-            // calculate the time required to draw the frame in ms
-            frameTime = (System.nanoTime() - frameStartTime) / 1000000;
-
-            if (frameTime < MAX_FRAME_TIME) {
-                try {
-                    Thread.sleep(MAX_FRAME_TIME - frameTime);
-                } catch (InterruptedException e) {
-                    // ignore
+            finally {
+                if (canvas != null) {
+                    synchronized (holder) {
+                        holder.unlockCanvasAndPost(canvas);
+                    }
                 }
             }
-
         }
     }
 }

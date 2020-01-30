@@ -2,24 +2,40 @@ package com.example.sonicapp;
 
 
 class KoggerSonicBaseDriver_c extends ProtoSerial {
-    static final short CMD_ID_Chart = 10;
-    static final short CMD_ID_Array = 11;
-    static final short CMD_ID_YPR = 12;
-    static final short CMD_ID_QUAT = 13;
-    static final short CMD_ID_TEMP = 14;
-    static final short CMD_ID_AGC = 20;
-    static final short CMD_ID_TRANSC = 21;
-    static final short CMD_ID_SOUND_SPEED = 22;
-    static final short CMD_ID_UART = 0x17;
-    static final short CMD_ID_FLASH_SET = 0x1D;
-    static final short CMD_ID_GNSS = 0x64;
+    static final short ID_NONE = 0;
+    static final short ID_TIMESTAMP = 0x01;
+    static final short ID_DIST = 0x02;
+    static final short ID_CHART = 0x03;
+    static final short ID_ATTITUDE = 0x04;
+    static final short ID_TEMP = 0x05;
 
+    static final short ID_DATASET = 0x10;
+    static final short ID_DIST_SETUP = 0x11;
+    static final short ID_CHART_SETUP = 0x12;
+    static final short ID_DSP = 0x13;
+    static final short ID_TRANSC = 0x14;
+    static final short ID_SOUND = 0x15;
+    static final short ID_PIN = 0x16;
+    static final short ID_BUS = 0x17;
+    static final short ID_UART = 0x18;
+    static final short ID_I2C = 0x19;
+    static final short ID_CAN = 0x1A;
+    static final short ID_GYR_SETUP = 0x1B;
+    static final short ID_ACC_SETUP = 0x1C;
+
+    static final short ID_VERSION = 0x20;
+    static final short ID_MARK = 0x21;
+    static final short ID_DIAG = 0x22;
+    static final short ID_FLASH = 0x23;
+    static final short ID_BOOT = 0x24;
+    static final short ID_FW_UPDATE = 0x25;
+
+    static final short ID_GNSS = 0x64;
+
+
+    static final short Content = 1;
     static final short Setting = 2;
     static final short Getting = 3;
-    static final short Content = 4;
-    static final short Action = 5;
-    static final short Reaction = 6;
-    static final short Response = 6;
 
     static final short RespNone = 0;
     static final short RespOk = 1;
@@ -31,113 +47,270 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     static final short RespErrorKey = 7;
     static final short RespErrorRuntime = 8;
 
-    static final long UART_KEY = 0xC96B5D4A;
+    static final long CONFIRM_KEY = 0xC96B5D4A;
 
-    //ProtoSerial Proto;
+    static final long MarkTimeout = 100;
+    long MarkLastTime;
+    boolean AutoRequestSettings = true;
+    boolean AutoRequest = AutoRequestSettings;
+
     KoggerSonicData_c Data;
-    KoggerSonicData_c DataInterface;
+
+    public interface InterfaceListenerChart {
+        void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data);
+        void ReceiveNew();
+        void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples);
+        void ReceiveResponse(int code);
+    }
+
+    public interface InterfaceListenerTransc {
+        void ReceiveSetting();
+        void ReceiveResponse(int code);
+    }
+
+    public interface InterfaceListenerSound {
+        void ReceiveSetting();
+        void ReceiveResponse(int code);
+    }
+
+    public interface InterfaceListenerDataset {
+        void ReceiveSetting();
+        void ReceiveResponse(int code);
+    }
+
+
+    public interface InterfaceListenerAttitude {
+        void ReceiveYPR(float ypr[]);
+        void ReceiveQuat(float q[]);
+        void ReceiveResponse(int code);
+    }
+
+    public interface InterfaceListenerLoadUpdate {
+        void ReceiveResponse(int code);
+    }
+
+    InterfaceListenerDataset ListenerDataset;
+    InterfaceListenerChart ListenerChart;
+    InterfaceListenerTransc ListenerTrance;
+    InterfaceListenerSound ListenerSound;
+    InterfaceListenerAttitude ListenerAttitude;
+    InterfaceListenerLoadUpdate ListenerLoadUpdate;
+
+
+    void SetListenerDataset(InterfaceListenerDataset listener) {
+        ListenerDataset = listener;
+    }
+
+    void SetListenerChart(InterfaceListenerChart listener) {
+        ListenerChart = listener;
+    }
+
+    void SetListenerTransc(InterfaceListenerTransc listener) {
+        ListenerTrance = listener;
+    }
+
+    void SetListenerSound(InterfaceListenerSound listener) {
+        ListenerSound = listener;
+    }
+
+    void SetListenerLoadUpdate(InterfaceListenerLoadUpdate listener) {
+        ListenerLoadUpdate = listener;
+    }
+
+
+    void SetListenerAttitude(InterfaceListenerAttitude listener) {
+        ListenerAttitude = listener;
+    }
+
+    public interface InterfaceListenerSerial {
+        void ReceiveSetting(int baudrate, int id);
+        void ReceiveResponse(int code);
+    }
+    InterfaceListenerChart InterfaceListenerSerial;
 
     KoggerSonicBaseDriver_c() {
         super(null);
-        //Proto = new ProtoSerial(null);
+
+        SetListenerChart(new InterfaceListenerChart() {
+            public void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data) {
+            }
+
+            public void ReceiveNew() {
+            }
+
+            public void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples) {
+            }
+
+            public void ReceiveResponse(int code) {
+            }
+        });
+
+        SetListenerDataset(new InterfaceListenerDataset() {
+            @Override
+            public void ReceiveSetting() {
+
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        SetListenerTransc(new InterfaceListenerTransc() {
+            @Override
+            public void ReceiveSetting() {
+
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        SetListenerSound(new InterfaceListenerSound() {
+            @Override
+            public void ReceiveSetting() {
+
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        SetListenerLoadUpdate(new InterfaceListenerLoadUpdate() {
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
         Data = new KoggerSonicData_c();
-        DataInterface = new KoggerSonicData_c();
+    }
+
+    void SetAutoRequestSettings(boolean request) {
+        AutoRequestSettings = request;
+        AutoRequest = AutoRequestSettings;
     }
 
     class ProtoInst extends ProtoInstance {
         ProtoInst(short id, short type, int version, boolean resp) {
             super(id, type, version, resp);
         }
+
+        ProtoInst(short id, short type, int version, boolean resp, int len) {
+            super(id, type, version, resp, len);
+        }
+
         char ComputeLength() {
             char len = 0;
             switch(ID) {
-                case CMD_ID_Chart:
-                    if (Type == Action) {
-                        len = 14;
-                    } else if (Type == Getting) {
-                        len = 0;
-                    } else {
-                        return LENGTH_ERROR;
-                    }
-                    break;
-                case CMD_ID_Array:
-                    if (Type == Action) {
-                        len = 20;
-                    } else if (Type == Getting) {
-                        len = 0;
-                    } else {
-                        return LENGTH_ERROR;
-                    }
-                    break;
-                case CMD_ID_YPR:
+
+
+                case ID_CHART:
                     if (Type == Getting) {
                         len = 0;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
-                case CMD_ID_TEMP:
+
+                case ID_ATTITUDE:
                     if (Type == Getting) {
                         len = 0;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
-                case CMD_ID_QUAT:
+
+                case ID_TEMP:
                     if (Type == Getting) {
                         len = 0;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
-                case CMD_ID_AGC:
+
+                case ID_DATASET:
                     if (Type == Getting) {
-                        len = 0;
+                        len = 1;
                     } else if (Type == Setting) {
-                        len = 18;
+                        len = 9;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
-                case CMD_ID_TRANSC:
-                    if (Type == Getting) {
-                        len = 0;
-                    } else if (Type == Setting) {
-                        len = 8;
-                    } else {
-                        return LENGTH_ERROR;
-                    }
-                    break;
-                case CMD_ID_SOUND_SPEED:
-                    if (Type == Getting) {
-                        len = 0;
-                    } else if (Type == Setting) {
+
+                case ID_CHART_SETUP:
+                    if (Type == Setting) {
                         len = 6;
+                    } else if (Type == Getting) {
+                        len = 0;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
-                case CMD_ID_UART:
+
+                case ID_TRANSC:
+                    if (Type == Getting) {
+                        len = 0;
+                    } else if (Type == Setting) {
+                        len = 4;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
+
+                case ID_SOUND:
+                    if (Type == Getting) {
+                        len = 0;
+                    } else if (Type == Setting) {
+                        len = 4;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
+
+                case ID_UART:
                     if (Type == Getting) {
                         len = 5;
                     } else if (Type == Setting) {
-                        len = 13;
+                        len = 9;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
 
-                case CMD_ID_FLASH_SET:
-                    if (Type == Action) {
-                        len = 8;
+                case ID_MARK:
+                    if (Type == Setting) {
+                        len = 4;
                     } else {
                         return LENGTH_ERROR;
                     }
                     break;
 
-                case CMD_ID_GNSS:
+                case ID_FLASH:
+                    if (Type == Setting) {
+                        len = 4;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
+
+                case ID_GNSS:
                     if (Type == Content) {
                         len = 20;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
+
+                case ID_BOOT:
+                    if (Type == Setting) {
+                        len = 4;
                     } else {
                         return LENGTH_ERROR;
                     }
@@ -150,29 +323,27 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     class KoggerSonicData_c {
         class ChartContent_c {
             final int MaxDist = 50000;
-            long StartPos_mm = 0;
+            int AbsOffset = 0;
             int Size = 400;
             int Resol_mm = 10;
             int Offset;
-            int Period_ms = 200;
             short Data[] = new short[5000];
             short DataPos;
             Boolean DataComplete = false;
             Boolean SettingsUpdate = false;
 
             void Set(ChartContent_c data) {
-                StartPos_mm = data.StartPos_mm;
+                AbsOffset = data.AbsOffset;
                 Size = data.Size;
                 Resol_mm = data.Resol_mm;
-                Period_ms = data.Period_ms;
             }
 
-            void SetStartPos(long start_pos_mm) {
-                StartPos_mm = start_pos_mm;
+            void SetStartPos(int start_pos_mm) {
+                AbsOffset = start_pos_mm;
             }
 
-            long GetStartPos() {
-                return StartPos_mm;
+            int GetAbsOffset() {
+                return AbsOffset;
             }
 
             void SetResol(int resol_mm) {
@@ -200,18 +371,17 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                 return Size;
             }
 
-            void SetPeriod(int period_ms) {
-                Period_ms = period_ms;
-            }
-
-            int GetPeriod() {
-                return Period_ms;
+            int GetMaxDist_mm() {
+                return Size*Resol_mm + AbsOffset;
             }
 
             void SetOffset(int offset) {
-                if (offset == 0 && DataPos != 0) {
-                    Size = DataPos + Offset;
-                    DataComplete = true;
+                if (offset == 0) {
+                    Size = DataPos;
+                    DataPos = 0;
+                    if(Size > 0) {
+                        DataComplete = true;
+                    }
                 }
                 Offset = offset;
             }
@@ -232,66 +402,42 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                 return false;
             }
 
-            void InitData(long start_pos_mm, int offset, int resol_mm) {
+            void InitData(int start_pos_mm, int offset, int resol_mm) {
                 SetStartPos(start_pos_mm);
                 SetResol(resol_mm);
                 SetOffset(offset);
-                DataPos = 0;
+//                DataPos = 0;
             }
 
-            void InitContent(long start_pos_mm, int size_chart, int resol_mm, int period_ms) {
+            void InitContent(int start_pos_mm, int size_chart, int resol_mm) {
                 SetStartPos(start_pos_mm);
                 SetResol(resol_mm);
                 SetSize(size_chart);
-                SetPeriod(period_ms);
                 SettingsUpdate = true;
             }
 
             void AddData(short data) {
-                Data[DataPos + Offset] = data;
-                DataPos++;
+                if(DataPos < Data.length) {
+                    Data[DataPos] = data;
+                    DataPos++;
+                }
             }
         }
 
-        class YPRContent_c {
-            float Yaw;
-            float Pitch;
-            float Roll;
+        class Attitude_c {
+            float YPR[] = new float[3];
+            float Quat[] = new float[4];
 
-            void Set(float yaw, float pitch, float roll) {
-                Yaw = yaw;
-                Pitch = pitch;
-                Roll = roll;
-            }
-        }
-
-        class AGCContent_c {
-            long StartPos = 0;
-            int Offset = 0;
-            int Slope = 20;
-            int Absorp = 0;
-
-            void Set(long start_pos, int offset, int slope, int absorp) {
-                StartPos = start_pos;
-                Offset = offset;
-                Slope = slope;
-                Absorp = absorp;
+            void SetQuat(float q[]) {
+                for(int i = 0; i < 4; i++) {
+                    Quat[i] = q[i];
+                }
             }
 
-            int getStart() {
-                return (int)StartPos;
-            }
-
-            int getOffset() {
-                return Offset;
-            }
-
-            int getSlope() {
-                return Slope;
-            }
-
-            int getAbsorp() {
-                return Absorp;
+            void SetYPR(float ypr[]) {
+                for(int i = 0; i < 3; i++) {
+                    YPR[i] = ypr[i];
+                }
             }
         }
 
@@ -304,12 +450,6 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                 SetFreq(freq_khz);
                 SetWidth(width_pulse);
                 SetBoost(boost);
-            }
-
-            void Set(TransContent_c data) {
-                SetFreq(data.Freq_khz);
-                SetWidth(data.WidthPulse);
-                SetBoost(data.Boost);
             }
 
             int GetFreq() {
@@ -349,18 +489,102 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
             }
         }
 
+        class Channel_c {
+            int Period = 0;
+            long Mask = 0x00;
+            int ID = 1;
+
+            void setPeriod(int period) {
+                Period = period;
+            }
+
+            int getPeriod() {
+                return Period;
+            }
+
+            void setChart(boolean en) {
+                int bit_offset = 1;
+                if(en) {
+                    Mask |= (1<<bit_offset);
+                } else {
+                    Mask &= ~(1<<bit_offset);
+                }
+            }
+
+            boolean getChart() {
+                int bit_offset = 1;
+                return (Mask & (1<<bit_offset)) == (1<<bit_offset);
+            }
+
+            void setTemp(boolean en) {
+                int bit_offset = 4;
+                if(en) {
+                    Mask |= (1<<bit_offset);
+                } else {
+                    Mask &= ~(1<<bit_offset);
+                }
+            }
+
+            boolean getTemp() {
+                int bit_offset = 4;
+                return (Mask & (1<<bit_offset)) == (1<<bit_offset);
+            }
+
+            void setQuat(boolean en) {
+                int bit_offset = 3;
+                if(en) {
+                    Mask |= (1<<bit_offset);
+                } else {
+                    Mask &= ~(1<<bit_offset);
+                }
+            }
+
+            boolean getQuat() {
+                int bit_offset = 3;
+                return (Mask & (1<<bit_offset)) == (1<<bit_offset);
+            }
+
+            void setDist(boolean en) {
+                int bit_offset = 0;
+                if(en) {
+                    Mask |= (1<<bit_offset);
+                } else {
+                    Mask &= ~(1<<bit_offset);
+                }
+            }
+
+            boolean getDist() {
+                int bit_offset = 0;
+                return (Mask & (1<<bit_offset)) == (1<<bit_offset);
+            }
+
+            void setDistNMEA(boolean en) {
+                int bit_offset = 6;
+                if(en) {
+                    Mask |= (1<<bit_offset);
+                } else {
+                    Mask &= ~(1<<bit_offset);
+                }
+            }
+
+            boolean getNMEA() {
+                int bit_offset = 6;
+                return (Mask & (1<<bit_offset)) == (1<<bit_offset);
+            }
+        }
+
+        Channel_c Channel = new Channel_c();
+
         ChartContent_c Chart;
-        YPRContent_c YPR;
+        Attitude_c Attitude;
         float Temp;
         int SoundSpeed_m_s = 1500;
-        AGCContent_c AGC;
         TransContent_c Transc;
         UARTContent_c UART;
 
         KoggerSonicData_c() {
             Chart = new ChartContent_c();
-            YPR = new YPRContent_c();
-            AGC = new AGCContent_c();
+            Attitude = new Attitude_c();
             Transc = new TransContent_c();
             UART = new UARTContent_c();
         }
@@ -375,96 +599,159 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     private void SwitchParsing(int id) {
         int parse_answer = RespNone;
         switch(id) {
-            case CMD_ID_Chart:
+            case ID_DIST:
+                parse_answer = ParsDist();
+                break;
+
+            case ID_CHART:
                 parse_answer = ParsChart();
                 break;
 
-            case CMD_ID_YPR:
-                parse_answer = ParceYPR();
+            case ID_ATTITUDE:
+                parse_answer = ParceAttitude();
                 break;
 
-            case CMD_ID_TEMP:
+            case ID_TEMP:
                 parse_answer = ParceTemp();
                 break;
 
-            case CMD_ID_TRANSC:
+            case ID_DATASET:
+                parse_answer = ParsDataset();
+                break;
+
+            case ID_DIST_SETUP:
+                parse_answer = ParsDistSetup();
+                break;
+
+            case ID_CHART_SETUP:
+                parse_answer = ParsChartSetup();
+                break;
+
+            case ID_TRANSC:
                 parse_answer = ParceTransc();
                 break;
 
-            case CMD_ID_SOUND_SPEED:
+            case ID_SOUND:
                 parse_answer = ParceSoundSpeed();
                 break;
 
-            case CMD_ID_UART:
+            case ID_UART:
                 parse_answer = ParceUART();
                 break;
 
+            case ID_FW_UPDATE:
+                parse_answer = ParceLoadUpdate();
+                break;
             default:
                 break;
         }
+
+        if(!In.Mark && (System.currentTimeMillis() - MarkLastTime > MarkTimeout)) {
+            MarkLastTime = System.currentTimeMillis();
+            SetMark();
+
+            if(AutoRequest) {
+                RequestAllSettings();
+            }
+        }
     }
 
-    protected void CallbackGet_Chart() {
-    }
-
-    protected void CallbackResp_Chart(int code) {
-    }
-
-    private int ParsChart() {
+    private int ParsDist() {
         if(In.Response) {
-            CallbackResp_Chart(In.ReadU1());
+//            ListenerDist.ReceiveResponse(In.ReadU1());
         } else {
-            if (In.Type == Reaction) {
+            if (In.Type == Content) {
                 if (In.Ver == 0) {
-                    long start_pos_mm = In.ReadU4();
-                    int item_offset = In.ReadU2();
-                    int item_resol_mm = In.ReadU2();
-                    int data_len = In.GetReadAvailable();
-                    Data.Chart.InitData(start_pos_mm, item_offset, item_resol_mm);
-                    for (int i = 0; i < data_len; i++) {
-                        short data = (short) (In.ReadU1());
-                        Data.Chart.AddData(data);
-                    }
-                    CallbackGet_Chart();
-                } else return RespErrorVersion;
-            } else if (In.Type == Content) {
-                if (In.Ver == 0) {
-                    long start_pos_mm = In.ReadU4();
-                    int item_cnt = In.ReadU2();
-                    int item_resol_mm = In.ReadU2();
-                    int item_repead_ms = In.ReadU2();
-                    Data.Chart.InitContent(start_pos_mm, item_cnt, item_resol_mm, item_repead_ms);
-                    CallbackGet_Chart();
+                    long dist = In.ReadU4();
+
                 } else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    protected void CallbackGet_YPR() {
-    }
-
-    protected void CallbackResp_YPR(int code) {
-    }
-
-    private int ParceYPR() {
+    private int ParsChart() {
         if(In.Response) {
-            CallbackResp_YPR(In.ReadU1());
+            ListenerChart.ReceiveResponse(In.ReadU1());
+        } else {
+            if (In.Type == Content) {
+                if (In.Ver == 0) {
+                    int seq_offset = In.ReadU2();
+                    int sample_resol_mm = In.ReadU2();
+                    int abs_offset = In.ReadU2();
+
+                    int data_len = In.GetReadAvailable();
+                    Data.Chart.InitData(abs_offset, seq_offset, sample_resol_mm);
+
+                    if(seq_offset == 0) {
+                        ListenerChart.ReceiveNew();
+                    }
+
+                    for (int i = 0; i < data_len; i++) {
+                        short data = (short) (In.ReadU1());
+                        Data.Chart.AddData(data);
+                    }
+
+                    if (Data.Chart.GetDataComlete()) {
+                        ListenerChart.ReceiveComplete(Data.Chart.AbsOffset, Data.Chart.Resol_mm,  Data.Chart.GetSize(), Data.Chart.Data);
+                    }
+                } else return RespErrorVersion;
+            } else return RespErrorType;
+        }
+        return RespOk;
+    }
+
+    protected void CallbackReceive_Attitude(int ver) {
+        if(ver == 0) {
+            ListenerAttitude.ReceiveYPR(Data.Attitude.YPR);
+        } else if(ver == 1) {
+            ListenerAttitude.ReceiveQuat(Data.Attitude.Quat);
+        }
+    }
+
+    protected void CallbackResp_Attitude(int code) {
+    }
+
+    private int ParceAttitude() {
+        if(In.Response) {
+            CallbackResp_Attitude(In.ReadU1());
         } else {
             if (In.Type == Content) {
                 if (In.Ver == 0) {
                     short yaw = In.ReadS2();
                     short pitch = In.ReadS2();
                     short roll = In.ReadS2();
-                    Data.YPR.Set((float) yaw * 0.01f, (float) pitch * 0.01f, (float) roll * 0.01f);
-                    CallbackGet_YPR();
-                } else return RespErrorVersion;
+
+                    float ypr[] = new float[3];
+                    float presc = 0.01f;
+                    ypr[0]= (float) yaw * presc;
+                    ypr[1]= (float) pitch * presc;
+                    ypr[2]= (float) roll * presc;
+
+                    Data.Attitude.SetYPR(ypr);
+                    CallbackReceive_Attitude(In.Ver);
+                } else if (In.Ver == 1) {
+                    short q0 = In.ReadS2();
+                    short q1 = In.ReadS2();
+                    short q2 = In.ReadS2();
+                    short q3 = In.ReadS2();
+
+                    float quat[] = new float[4];
+                    float presc = 1/32767;
+                    quat[0]= (float) q0 * presc;
+                    quat[1]= (float) q1 * presc;
+                    quat[2]= (float) q2 * presc;
+                    quat[2]= (float) q3 * presc;
+
+                    Data.Attitude.SetQuat(quat);
+                    CallbackReceive_Attitude(In.Ver);
+                }  else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    protected void CallbackGet_Temp() {
+    protected void CallbackReceive_Temp(int ver) {
     }
 
     protected void CallbackResp_Temp(int code) {
@@ -477,59 +764,62 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
             if (In.Type == Content) {
                 if (In.Ver == 0) {
                     Data.Temp = (float)(In.ReadS2())*0.01f;
-                    CallbackGet_Temp();
+                    CallbackReceive_Temp(In.Ver);
                 } else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    protected void CallbackGet_SoundSpeed() {
-    }
-
-    protected void CallbackResp_SoundSpeed(int code) {
-    }
-
-    private int ParceSoundSpeed() {
+    private int ParsDataset() {
         if(In.Response) {
-            CallbackResp_SoundSpeed(In.ReadU1());
+            ListenerDataset.ReceiveResponse(In.ReadU1());
         } else {
             if (In.Type == Content) {
                 if (In.Ver == 0) {
-                    Data.SoundSpeed_m_s = In.ReadU2();
-                    CallbackGet_SoundSpeed();
+                    int channel_id =  In.ReadU1();
+                    Data.Channel.Period  = (int)In.ReadU4();
+                    Data.Channel.Mask  = (int)In.ReadU4();
+
+                    ListenerDataset.ReceiveSetting();
                 } else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    protected void CallbackGet_UART() {
-    }
-
-    protected void CallbackResp_UART(int code) {
-    }
-
-    private int ParceUART() {
+    private int ParsDistSetup() {
         if(In.Response) {
-            CallbackResp_UART(In.ReadU1());
+            ListenerChart.ReceiveResponse(In.ReadU1());
         } else {
             if (In.Type == Content) {
                 if (In.Ver == 0) {
-                    long uart_key = In.ReadU4();
-                    int id = In.ReadU1();
-                    long boudrate = In.ReadU4();
-                    if (uart_key == UART_KEY) {
-                        if (id == 1) Data.UART.Set((int) boudrate);
-                        CallbackGet_UART();
-                    } else return RespErrorKey;
+
                 } else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    protected void CallbackGet_Transc() {
+    private int ParsChartSetup() {
+        if(In.Response) {
+            ListenerChart.ReceiveResponse(In.ReadU1());
+        } else {
+            if (In.Type == Content) {
+                if (In.Ver == 0) {
+                    int sample_cnt = In.ReadU2();
+                    int sample_resol_mm = In.ReadU2();
+                    int abs_offset = In.ReadU2();
+                    Data.Chart.InitContent(abs_offset, sample_cnt, sample_resol_mm);
+                    ListenerChart.ReceiveSetting(sample_cnt, sample_resol_mm, abs_offset);
+                } else return RespErrorVersion;
+            } else return RespErrorType;
+        }
+        return RespOk;
+    }
+
+    protected void CallbackRequest_Transc() {
+        ListenerTrance.ReceiveSetting();
     }
 
     protected void CallbackResp_Transc(int code) {
@@ -545,110 +835,230 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                     short width_pulse = In.ReadU1();
                     short boost = In.ReadU1();
                     Data.Transc.Set(freq_khz, width_pulse, boost);
-                    CallbackGet_Transc();
+                    CallbackRequest_Transc();
                 } else return RespErrorVersion;
             } else return RespErrorType;
         }
         return RespOk;
     }
 
-    void SetChart() {
-        Out.New(new ProtoInst(CMD_ID_Chart, Action, 0, true));
-        Out.WriteU4(Data.Chart.GetStartPos());
+    protected void CallbackReceive_SoundSpeed(int ver) {
+        ListenerSound.ReceiveSetting();
+    }
+
+    protected void CallbackResp_SoundSpeed(int code) {
+    }
+
+    private int ParceSoundSpeed() {
+        if(In.Response) {
+            CallbackResp_SoundSpeed(In.ReadU1());
+        } else {
+            if (In.Type == Content) {
+                if (In.Ver == 0) {
+                    Data.SoundSpeed_m_s = (int)In.ReadU4()/1000;
+                    CallbackReceive_SoundSpeed(In.Ver);
+                } else return RespErrorVersion;
+            } else return RespErrorType;
+        }
+        return RespOk;
+    }
+
+    protected void CallbackReceive_UART(int ver) {
+    }
+
+    protected void CallbackResp_UART(int code) {
+    }
+
+    private int ParceUART() {
+        if(In.Response) {
+            CallbackResp_UART(In.ReadU1());
+        } else {
+            if (In.Type == Content) {
+                if (In.Ver == 0) {
+                    long uart_key = In.ReadU4();
+                    int id = In.ReadU1();
+                    long boudrate = In.ReadU4();
+                    if (uart_key == CONFIRM_KEY) {
+                        if (id == 1) Data.UART.Set((int) boudrate);
+                        CallbackReceive_UART(In.Ver);
+                    } else return RespErrorKey;
+                } else return RespErrorVersion;
+            } else return RespErrorType;
+        }
+        return RespOk;
+    }
+
+    private int ParceLoadUpdate() {
+        if(In.Response) {
+            ListenerLoadUpdate.ReceiveResponse(In.ReadU1());
+        } else {
+            if (In.Type == Setting) {
+                if (In.Ver == 0) {
+
+                } else return RespErrorVersion;
+            } else if (In.Type == Content) {
+                if (In.Ver == 0) {
+
+                } else return RespErrorVersion;
+            } else return RespErrorType;
+        }
+        return RespOk;
+    }
+
+    void RequestChart() {
+        Out.New(new ProtoInst(ID_CHART, Getting, 0, true));
+        Out.End();
+    }
+
+    void RequstAttitudeInYPR() {
+        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 0, true));
+        Out.End();
+    }
+
+    void RequestAttitudeInQuat() {
+        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 1, true));
+        Out.End();
+    }
+
+    void RequestTemperature() {
+        Out.New(new ProtoInst(ID_TEMP, Getting, 0, true));
+        Out.End();
+    }
+
+    void RequestChannel() {
+        Out.New(new ProtoInst(ID_DATASET, Getting, 0, true));
+        Out.WriteU1((short)(1));
+        Out.End();
+    }
+
+    void SendChannel() {
+        Out.New(new ProtoInst(ID_DATASET, Setting, 0, true));
+        Out.WriteU1((short)1);
+        Out.WriteU4(Data.Channel.getPeriod());
+        Out.WriteU4(Data.Channel.Mask);
+        Out.End();
+    }
+
+    void RequestChartSetup() {
+        Out.New(new ProtoInst(ID_CHART_SETUP, Getting, 0, true));
+        Out.End();
+    }
+
+    void SendChartSetup() {
+        Out.New(new ProtoInst(ID_CHART_SETUP, Setting, 0, true));
         Out.WriteU2(Data.Chart.GetSize());
         Out.WriteU2(Data.Chart.GetResol());
-        Out.WriteU2(Data.Chart.GetPeriod());
-        Out.WriteU4(0);
+        Out.WriteU2(Data.Chart.GetAbsOffset());
         Out.End();
     }
 
-    void GetChartSettings() {
-        Out.New(new ProtoInst(CMD_ID_Chart, Getting, 0, true));
+
+    void RequestTransc() {
+        Out.New(new ProtoInst(ID_TRANSC, Getting, 0, true));
         Out.End();
     }
 
-    void GetYPR() {
-        Out.New(new ProtoInst(CMD_ID_YPR, Getting, 0, true));
-        Out.End();
-    }
-
-    void GetTemp() {
-        Out.New(new ProtoInst(CMD_ID_TEMP, Getting, 0, true));
+    void SendTransc() {
+        Out.New(new ProtoInst(ID_TRANSC, Setting, 0, true));
+        Out.WriteU2(Data.Transc.Freq_khz);
+        Out.WriteU1(Data.Transc.WidthPulse);
+        Out.WriteU1(Data.Transc.Boost);
         Out.End();
     }
 
     void SetTransc(int freq, short width_pulse, short boost) {
         Data.Transc.Set(freq, width_pulse, boost);
-        SetTransc();
+        SendTransc();
     }
 
-    void SetTransc() {
-        Out.New(new ProtoInst(CMD_ID_TRANSC, Setting, 0, true));
-        Out.WriteU2(Data.Transc.Freq_khz);
-        Out.WriteU1(Data.Transc.WidthPulse);
-        Out.WriteU1(Data.Transc.Boost);
-        Out.WriteU4(0);
+
+    void RequestSoundSpeed() {
+        Out.New(new ProtoInst(ID_SOUND, Getting, 0, true));
         Out.End();
     }
 
-    void GetTransc() {
-        Out.New(new ProtoInst(CMD_ID_TRANSC, Getting, 0, true));
+    void SendSoundSpeed() {
+        Out.New(new ProtoInst(ID_SOUND, Setting, 0, true));
+        Out.WriteU4(Data.SoundSpeed_m_s*1000);
         Out.End();
     }
 
     void SetSoundSpeed(int sound_speed_m_s) {
         Data.SoundSpeed_m_s = sound_speed_m_s;
-        SetSoundSpeed();
+        SendSoundSpeed();
     }
 
-    void SetSoundSpeed() {
-        Out.New(new ProtoInst(CMD_ID_SOUND_SPEED, Setting, 0, true));
-        Out.WriteU2(Data.SoundSpeed_m_s);
-        Out.WriteU4(0); // Reseved
-        Out.End();
-    }
-
-    void GetSoundSpeed() {
-        Out.New(new ProtoInst(CMD_ID_SOUND_SPEED, Getting, 0, true));
-        Out.End();
-    }
-
-    void SetUART() {
-        Out.New(new ProtoInst(CMD_ID_UART, Setting, 0, true));
-        Out.WriteU4(UART_KEY);
+    void SendUART() {
+        Out.New(new ProtoInst(ID_UART, Setting, 0, true));
+        Out.WriteU4(CONFIRM_KEY);
         Out.WriteU1((short)1);
         Out.WriteU4(Data.UART.Baudrate);
-        Out.WriteU4(0); // Reseved
         Out.End();
     }
 
-    void GetUART() {
-        Out.New(new ProtoInst(CMD_ID_UART, Getting, 0, true));
-        Out.WriteU4(UART_KEY);
-        Out.WriteU1((short)1);
+    void RequestUART() {
+        Out.New(new ProtoInst(ID_UART, Getting, 0, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.WriteU1((short)0);
         Out.End();
     }
 
-    void FlashAllSatting() {
-        Out.New(new ProtoInst(CMD_ID_FLASH_SET, Action, 0, true));
-        Out.WriteU4(UART_KEY);
-        Out.WriteU4(0);
+
+    void SetMark() {
+        Out.New(new ProtoInst(ID_MARK, Setting, 0, false));
+        Out.WriteU4(CONFIRM_KEY);
         Out.End();
     }
 
-    void ReadAllSettings() {
-        GetChartSettings();
-        GetTransc();
-        GetSoundSpeed();
-        GetUART();
+    void SaveAllSettings() {
+        Out.New(new ProtoInst(ID_FLASH, Setting, 0, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.End();
     }
 
-    void WriteAllSettings() {
-        CopyDataFromSource();
-        SetChart();
-        SetTransc();
-        SetSoundSpeed();
-        SetUART();
+    void RestoreAllSettings() {
+        Out.New(new ProtoInst(ID_FLASH, Setting, 2, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.End();
+    }
+
+    void BootRun() {
+        Out.New(new ProtoInst(ID_BOOT, Setting, 0, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.End();
+    }
+
+    void FWRun() {
+        Out.New(new ProtoInst(ID_BOOT, Setting, 1, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.End();
+        AutoRequest = AutoRequestSettings;
+    }
+
+    void LoadUpdatePart(int nbr_msg, byte[] data) {
+        AutoRequest = false;
+        Out.New(new ProtoInst(ID_FW_UPDATE, Setting, 0, true, 2 + data.length));
+        Out.WriteU2(nbr_msg);
+        for(int i = 0; i < data.length; i++) {
+            Out.WriteS1(data[i]);
+        }
+        Out.End();
+    }
+
+    void RequestAllSettings() {
+        RequestChannel();
+        RequestChartSetup();
+        RequestTransc();
+        RequestSoundSpeed();
+        RequestUART();
+    }
+
+    void SendAllSettings() {
+        SendChannel();
+        SendChartSetup();
+        SendTransc();
+        SendSoundSpeed();
+        SendUART();
     }
 
     void CopyDataFromSource() {

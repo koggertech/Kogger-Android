@@ -30,15 +30,15 @@ class OutputStreamExt extends ByteArrayOutputStream {
     }
 }
 
-class Serial{
-    UsbService usbService;
+class Serial {
+//    UsbService usbService;
 
     byte Data[];
     int pos_w = 0;
     int pos_r = 0;
 
     Serial() {
-        usbService = null;
+//        usbService = null;
         Data = new byte[32768];
     }
 
@@ -82,17 +82,17 @@ class Serial{
     }
 
     void writeByte(byte data[]) {
-        if(usbService != null) {
-            usbService.write(data);
-        }
+//        if(usbService != null) {
+//            usbService.write(data);
+//        }
     }
 
     void writeByte(byte data) {
-        byte arr_data[] = new byte[1];
-        arr_data[0]= data;
-        if(usbService != null) {
-            usbService.write(arr_data);
-        }
+//        byte arr_data[] = new byte[1];
+//        arr_data[0]= data;
+//        if(usbService != null) {
+//            usbService.write(arr_data);
+//        }
     }
 }
 
@@ -110,9 +110,10 @@ public class ProtoSerial {
     enum ProtoState {
         StateSync1,
         StateSync2,
-        StateLength1,
+        StateRoute,
         StateMode,
         StateID,
+        StateLength,
         StatePayload,
         StateCRCA,
         StateCRCB
@@ -155,15 +156,20 @@ public class ProtoSerial {
         }
 
         ProtoInstance(short id, short type, int version, boolean resp) {
-            Set((char)id, (char)type, (char)version, resp);
+            Set((char)id, (char)type, (char)version, resp, (char)0);
+            Length = ComputeLength();
         }
 
-        void Set(char id, char type, char version, boolean resp) {
+        ProtoInstance(short id, short type, int version, boolean resp, int len) {
+            Set((char)id, (char)type, (char)version, resp, (char)len);
+        }
+
+        void Set(char id, char type, char version, boolean resp, char len) {
             ID = id;
             Type = type;
             Version = version;
             Response = resp;
-            Length = ComputeLength();
+            Length = len;
         }
 
         char ComputeLength() {
@@ -263,6 +269,8 @@ public class ProtoSerial {
         int Mode;
         int Type;
         char Ver;
+        int Addr;
+        boolean Mark;
         boolean Response;
         int ErrorNbr;
         int ErrorHeader;
@@ -297,35 +305,28 @@ public class ProtoSerial {
 
                 case StateSync2:
                     if (b == HEAD2) {
-                        State = ProtoState.StateLength1;
+                        State = ProtoState.StateRoute;
                         CheckSumReset();
+                    } else if (b == HEAD1) {
+                        State = ProtoState.StateSync2;
                     } else {
                         State = ProtoState.StateSync1;
                         ErrorHeader++;
                     }
                     break;
 
-                case StateLength1:
-                    PayloadLen = (short)b;
-                    if (PayloadLen > 128) {
-                        ResetStateAsError();
-                    } else {
-                        CheckSumUpdate(b);
-                        Payload = new char[PayloadLen];
-                        State = ProtoState.StateMode;
-                    }
+                case StateRoute:
+                    CheckSumUpdate(b);
+                    Addr = (b&0xF);
+                    State = ProtoState.StateMode;
                     break;
 
                 case StateMode:
                     Mode = b;
-                    Type = (char)(Mode & 0x7);
-                    Ver = (char)((Mode >> 3) & 0x3);
-                    int resp = (Mode >> 7) & 0x01;
-                    if(resp == 1) {
-                        Response = true;
-                    } else {
-                        Response = false;
-                    }
+                    Type = (char)(Mode & 0x3);
+                    Ver = (char)((Mode >> 3) & 0x7);
+                    Mark = ((Mode >> 6) & 0x1) == 0x1;
+                    Response = ((Mode >> 7) & 0x01)  == 0x1;
                     CheckSumUpdate(b);
                     State = ProtoState.StateID;
                     break;
@@ -333,25 +334,28 @@ public class ProtoSerial {
                 case StateID:
                     ID = b;
                     CheckSumUpdate(b);
+                    State = ProtoState.StateLength;
+                    break;
+
+                case StateLength:
+                    PayloadLen = (short)b;
+                    ResetPayload();
+                    CheckSumUpdate(b);
+                    Payload = new char[PayloadLen];
+
                     if (PayloadLen > 0) {
                         State = ProtoState.StatePayload;
                     } else {
                         State = ProtoState.StateCRCA;
                     }
-
-                    ResetPayload();
                     break;
 
                 case StatePayload:
-                    if (PayloadOffset < 128) {
-                        Payload[PayloadOffset] = b;
-                        CheckSumUpdate(b);
-                        PayloadOffset++;
-                        if (PayloadOffset >= PayloadLen) {
-                            State = ProtoState.StateCRCA;
-                        }
-                    } else {
-                        ResetStateAsError();
+                    Payload[PayloadOffset] = b;
+                    CheckSumUpdate(b);
+                    PayloadOffset++;
+                    if (PayloadOffset >= PayloadLen) {
+                        State = ProtoState.StateCRCA;
                     }
                     break;
 
@@ -381,9 +385,10 @@ public class ProtoSerial {
             OutputStreamExt data_in = Log.GetStream();
             data_in.writeByte(HEAD1);
             data_in.writeByte(HEAD2);
-            data_in.writeByte((char)PayloadLen);
+            data_in.writeByte((char)0);
             data_in.writeByte((char)Mode);
             data_in.writeByte((char)ID);
+            data_in.writeByte((char)PayloadLen);
             data_in.writeByte(Payload);
             data_in.writeByte(PayloadCheckSumA);
             data_in.writeByte(PayloadCheckSumB);
@@ -545,13 +550,15 @@ public class ProtoSerial {
         void New(ProtoInstance inst, boolean output, boolean logging) {
             ToOutput = output;
             ToLog = logging;
+
             if(Log != null) {
                 LogStream = Log.GetStream();
             }
             Start();
-            WriteU1((short)inst.Length);
+            WriteU1((short)0);
             WriteU1((short)inst.GetMode());
             WriteU1((short)inst.ID);
+            WriteU1((short)inst.Length);
         }
 
         boolean End() {

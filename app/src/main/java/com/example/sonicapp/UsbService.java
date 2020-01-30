@@ -13,8 +13,10 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
+import java.io.IOException;
 
 import com.felhr.usbserial.CDCSerialDevice;
+import com.felhr.usbserial.SerialBuffer;
 import com.felhr.usbserial.UsbSerialDevice;
 import com.felhr.usbserial.UsbSerialInterface;
 
@@ -53,6 +55,8 @@ public class UsbService extends Service {
     private UsbDeviceConnection connection;
     private UsbSerialDevice serialPort;
 
+    long ChengeBaudrateTime = -1;
+
     private boolean serialPortConnected;
 
     public int getBaudrate() {
@@ -61,9 +65,10 @@ public class UsbService extends Service {
 
     public void SetBaudrate(int boudrate) {
         BAUD_RATE = boudrate;
-        if(serialPort != null && serialPortConnected) {
-            serialPort.setBaudRate(BAUD_RATE);
-        }
+        ChengeBaudrateTime = System.currentTimeMillis();
+//        if(serialPort != null && serialPortConnected) {
+//            serialPort.setBaudRate(BAUD_RATE);
+//        }
     }
 
     /*
@@ -147,6 +152,8 @@ public class UsbService extends Service {
         setFilter();
         usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
         findSerialPortDevice();
+        ProcessTh = new ProcessThread();
+        ProcessTh.start();
     }
 
     /* MUST READ about services
@@ -262,6 +269,22 @@ public class UsbService extends Service {
         }
     }
 
+    private class ProcessThread extends Thread {
+        @Override
+        public void run() {
+            while(true) {
+                if (serialPort != null) {
+                    if ((ChengeBaudrateTime != -1) && ((System.currentTimeMillis() - ChengeBaudrateTime) > 50)) {
+                        ChengeBaudrateTime = -1;
+                        serialPort.setBaudRate(BAUD_RATE);
+                    }
+                }
+            }
+        }
+    }
+
+    ProcessThread ProcessTh;
+
     /*
      * A simple thread to open a serial port.
      * Although it should be a fast operation. moving usb operations away from UI thread is a good thing.
@@ -272,6 +295,8 @@ public class UsbService extends Service {
             serialPort = UsbSerialDevice.createUsbSerialDevice(device, connection);
             if (serialPort != null) {
                 if (serialPort.open()) {
+
+
                     serialPortConnected = true;
                     serialPort.setBaudRate(BAUD_RATE);
                     serialPort.setDataBits(UsbSerialInterface.DATA_BITS_8);
