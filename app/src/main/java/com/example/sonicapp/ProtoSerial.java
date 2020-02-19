@@ -469,6 +469,7 @@ public class ProtoSerial {
         int DataFilled = 0;
         OutputStreamExt LogStream;
         boolean ToLog, ToOutput;
+        int DevAddress = 0;
 
         ProtoOut(Serial port) {
             SetPort(port);
@@ -555,7 +556,7 @@ public class ProtoSerial {
                 LogStream = Log.GetStream();
             }
             Start();
-            WriteU1((short)0);
+            WriteU1((short)(DevAddress));
             WriteU1((short)inst.GetMode());
             WriteU1((short)inst.ID);
             WriteU1((short)inst.Length);

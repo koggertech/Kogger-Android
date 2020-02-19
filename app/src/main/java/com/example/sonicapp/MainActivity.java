@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
 
     CustomSeekBar SB_SamplesCount;
     CustomSeekBar SB_Range;
+    CustomSeekBar SB_Offset;
 
     CustomSeekBar SB_Freq;
     CustomSeekBar SB_Width;
@@ -70,6 +71,9 @@ public class MainActivity extends AppCompatActivity {
     CustomSeekBar SB_SoundSpeed;
 
     CustomSeekBar SB_Period;
+
+    CustomSeekBar SB_DevAddr;
+
     Switch SW_DatasetChart;
     Switch SW_DatasetAttQuat;
     Switch SW_DatasetSimpleDist;
@@ -106,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int INTERFACE_RECEIVE_TRANSC_V0 = 0x1400;
     private static final int INTERFACE_RECEIVE_SND_SPD_V0 = 0x1500;
     private static final int INTERFACE_RECEIVE_UART_V0 = 0x1800;
+    private static final int INTERFACE_RECEIVE_UART_V1 = 0x1801;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -121,6 +126,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
+        SB_Baudrate = findViewById(R.id.sb_baudrate);
+
+        SB_SamplesCount = findViewById(R.id.sb_itemchart);
+        SB_Range = findViewById(R.id.sb_range);
+        SB_Offset = findViewById(R.id.sb_offset);
+
+        SB_Freq = findViewById(R.id.sb_freq);
+        SB_Width = findViewById(R.id.sb_width);
+        SW_Boost = findViewById(R.id.sw_boost);
+        SB_SoundSpeed = findViewById(R.id.sb_spd_sound);
+
+        SB_Period = findViewById(R.id.sb_period);
+        SB_DevAddr = findViewById(R.id.sb_dev_addr);
+
         mSettings = getSharedPreferences(APP_PREFERENCES, Context.MODE_PRIVATE);
 
         LinearLayout linearLayout = findViewById(R.id.chart_layout);
@@ -135,14 +154,14 @@ public class MainActivity extends AppCompatActivity {
 
         DeviceDriver.SetListenerChart(new KoggerSonicBaseDriver_c.InterfaceListenerChart() {
             @Override
-            public void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data) {
+            public void ReceiveComplete(int sample_offset, int resolution_mm, int count_samples, short[] data) {
 
                 int[] val_chart = new int[count_samples];
                 for (int i = 0; i < count_samples; i++) {
                     val_chart[i] = data[i];
                 }
 
-                surfaceView.Waterfall.PushData(val_chart, resolution_mm, (int)offset_mm);
+                surfaceView.Waterfall.PushData(val_chart, resolution_mm, sample_offset);
 //                surfaceView.Waterfall2.PushData(val_chart, resolution_mm, (int)offset_mm);
             }
 
@@ -151,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples) {
+            public void ReceiveSetting(int count_samples, int resolution_mm, int offset_samples) {
                 InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_CHART_SETUP_V0, null).sendToTarget();
             }
 
@@ -189,6 +208,26 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void ReceiveSetting() {
                 InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_SND_SPD_V0, null).sendToTarget();
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
+        DeviceDriver.SetListenerUART(new KoggerSonicBaseDriver_c.InterfaceListenerUART() {
+            @Override
+            public void ReceiveSetting(int ver) {
+                switch (ver) {
+                    case 0:
+                        InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_UART_V0, null).sendToTarget();
+                        break;
+                    case 1:
+                        InfoHandler_Box.obtainMessage(INTERFACE_RECEIVE_UART_V1, null).sendToTarget();
+                        break;
+                }
+
             }
 
             @Override
@@ -408,14 +447,6 @@ public class MainActivity extends AppCompatActivity {
         });
         TB_Update.setChecked(false);
 
-
-        SB_Freq =  findViewById(R.id.sb_freq);
-        SB_Width =  findViewById(R.id.sb_width);
-        SW_Boost = findViewById(R.id.sw_boost);
-        SB_SoundSpeed =  findViewById(R.id.sb_spd_sound);
-        SB_Period =  findViewById(R.id.sb_period);
-
-        SB_SamplesCount = findViewById(R.id.sb_itemchart);
         SB_SamplesCount.TextV = findViewById(R.id.tv_itemchart);
         SB_SamplesCount.StartText = "Samples: ";
         SB_SamplesCount.SetCaseValues(new int[]{100, 150, 300, 500, 800, 1000, 1500, 3000, 4000, 5000});
@@ -424,12 +455,12 @@ public class MainActivity extends AppCompatActivity {
             public void Update(int value) {
                 DeviceDriver.Data.Chart.SetSize(value);
                 SB_Range.setValue(DeviceDriver.Data.Chart.GetResol());
+                DeviceDriver.Data.Chart.SetSampleOffset((DeviceDriver.Data.Chart.GetSize()*SB_Offset.getValue())/100);
                 DeviceDriver.SendChartSetup();
             }
         });
         SB_SamplesCount.setValue(100);
 
-        SB_Range = findViewById(R.id.sb_range);
         SB_Range.TextV = findViewById(R.id.tv_range);
         SB_Range.StartText = "Resol., mm: ";
         SB_Range.SetCaseValues(new int[]{10, 20, 30, 40, 50, 60, 70, 80, 90, 100});
@@ -443,8 +474,19 @@ public class MainActivity extends AppCompatActivity {
         });
         SB_Range.setValue(10);
 
+        SB_Offset.TextV = findViewById(R.id.tv_offset);
+        SB_Offset.StartText = "Offset. , %: ";
+        SB_Offset.SetCaseValues(new int[]{0, 25, 50, 75, 100, 125, 150, 175, 200 });
+        SB_Offset.setListenerUpdate(new ListenerControlUpdate() {
+            @Override
+            public void Update(int value) {
+                DeviceDriver.Data.Chart.SetSampleOffset((DeviceDriver.Data.Chart.GetSize()*value)/100);
+                SB_Offset.setValue((DeviceDriver.Data.Chart.GetSampleOffset()*100)/DeviceDriver.Data.Chart.GetSize());
+                DeviceDriver.SendChartSetup();
+            }
+        });
+        SB_Offset.setValue(0);
 
-        SB_Freq = findViewById(R.id.sb_freq);
         SB_Freq.TextV = findViewById(R.id.tv_freq);
         SB_Freq.StartText = "Freq., kHz: ";
         SB_Freq.SetCaseValues(new int[]{200, 210, 220, 230, 240, 250, 260, 270, 280, 290, 300, 310, 320, 330, 340, 350, 360, 370, 380, 390, 400, 410, 420, 430, 440, 450, 460, 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620, 630, 640, 650, 660, 670, 680, 690, 700, 710, 720, 730, 740, 750, 760, 770, 780, 790, 800});
@@ -457,7 +499,6 @@ public class MainActivity extends AppCompatActivity {
         });
         SB_Freq.setValue(700);
 
-        SB_Width = findViewById(R.id.sb_width);
         SB_Width.TextV = findViewById(R.id.tv_width);
         SB_Width.StartText = "Pulse Width: ";
         SB_Width.SetCaseValues(new int[]{0, 4, 6, 8, 10, 15, 20, 25, 30, 40, 50});
@@ -484,7 +525,6 @@ public class MainActivity extends AppCompatActivity {
         });
         SW_Boost.setChecked(false);
 
-        SB_SoundSpeed = findViewById(R.id.sb_spd_sound);
         SB_SoundSpeed.TextV = findViewById(R.id.tv_spd_sound);
         SB_SoundSpeed.StartText = "Sound speed, m/s: ";
         SB_SoundSpeed.SetCaseValues(new int[]{1400,  1405,  1410,  1415,  1420,  1425,  1430,  1435,  1440,  1445,  1450,  1455,  1460,  1465,  1470,  1475,  1480,  1485,  1490,  1495,  1500,  1505,  1510,  1515,  1520,  1525,  1530,  1535,  1540,  1545,  1550,  1555,  1560,  1565,  1570,  1575,  1580,  1585,  1590,  1595});
@@ -497,7 +537,6 @@ public class MainActivity extends AppCompatActivity {
         });
         SB_SoundSpeed.setValue(1500);
 
-        SB_Period = findViewById(R.id.sb_period);
         SB_Period.TextV = findViewById(R.id.tv_period);
         SB_Period.StartText = "Period, ms: ";
         SB_Period.SetCaseValues(new int[]{0,  10,  20,  50,  100,  200,  500,  1000,  2000});
@@ -546,6 +585,20 @@ public class MainActivity extends AppCompatActivity {
                 DeviceDriver.SendChannel();
             }
         });
+
+        SB_DevAddr.TextV = findViewById(R.id.tv_dev_addr);
+        SB_DevAddr.StartText = "Dev. address: ";
+        SB_DevAddr.SetCaseValues(new int[]{0,  1,  2,  3,  4,  5,  6,  7,  8, 9, 10, 11, 12, 13, 14, 15});
+        SB_DevAddr.setListenerUpdate(new ListenerControlUpdate() {
+            @Override
+            public void Update(int value) {
+                DeviceDriver.Data.UART.DevAddress = value;
+                DeviceDriver.SendUART_V1();
+                DeviceDriver.Out.DevAddress = value;
+                DeviceDriver.RequestUART_V1();
+            }
+        });
+        SB_DevAddr.setValue(0);
 
 
         SB_DispMinThr=  findViewById(R.id.sb_min_amp);
@@ -698,6 +751,7 @@ public class MainActivity extends AppCompatActivity {
                 case INTERFACE_RECEIVE_CHART_SETUP_V0:
                     SB_SamplesCount.setValue(DeviceDriver.Data.Chart.GetSize());
                     SB_Range.setValue(DeviceDriver.Data.Chart.GetResol());
+                    SB_Offset.setValue((DeviceDriver.Data.Chart.GetSampleOffset()*100)/DeviceDriver.Data.Chart.GetSize());
                     break;
 
                 case INTERFACE_RECEIVE_TRANSC_V0:
@@ -711,6 +765,10 @@ public class MainActivity extends AppCompatActivity {
                     break;
 
                 case INTERFACE_RECEIVE_UART_V0:
+                    break;
+
+                case INTERFACE_RECEIVE_UART_V1:
+                    SB_DevAddr.setValue(DeviceDriver.Data.UART.DevAddress);
                     break;
             }
         }
@@ -770,7 +828,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (mSettings.contains(APP_PREFERENCES_BAUDRATE) && SB_Baudrate != null) {
             int baudrate =  mSettings.getInt(APP_PREFERENCES_BAUDRATE, 0);
-            SB_Baudrate.setProgress(baudrate);
+            SB_Baudrate.setValue(baudrate);
         }
 
         if (mSettings.contains(APP_PREFERENCES_LOGGING) && SW_Log != null) {
@@ -800,7 +858,7 @@ public class MainActivity extends AppCompatActivity {
         unbindService(usbConnection);
 
         SharedPreferences.Editor editor = mSettings.edit();
-        editor.putInt(APP_PREFERENCES_BAUDRATE, SB_Baudrate.getProgress());
+        editor.putInt(APP_PREFERENCES_BAUDRATE, SB_Baudrate.getValue());
         editor.putBoolean(APP_PREFERENCES_LOGGING, SW_Log.isChecked());
         editor.putBoolean(APP_PREFERENCES_KEEP_SCREEN, SW_KeepScreen.isChecked());
         editor.putBoolean(APP_PREFERENCES_USE_GNSS, SW_GNSS.isChecked());

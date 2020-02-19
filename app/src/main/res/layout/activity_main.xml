@@ -351,6 +351,41 @@
                 app:tickMarkTint="#009688"
                 app:tickMarkTintMode="multiply" />
 
+
+            <TextView
+                android:id="@+id/tv_offset"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Range:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <view class="com.example.sonicapp.CustomSeekBar"
+                android:id="@+id/sb_offset"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="9"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
             <View
                 android:id="@+id/divider4"
                 android:layout_width="match_parent"
@@ -559,6 +594,47 @@
                 android:textColor="#E600140A"
                 android:textSize="16sp"
                 android:thumbTint="#00695C" />
+
+            <View
+                android:id="@+id/divider29"
+                android:layout_width="match_parent"
+                android:layout_height="3dp"
+                android:background="?android:attr/listDivider" />
+
+            <TextView
+                android:id="@+id/tv_dev_addr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="5dp"
+                android:text="Period, ms:"
+                android:textColor="#E600140A"
+                android:textSize="16sp" />
+
+            <view class="com.example.sonicapp.CustomSeekBar"
+                android:id="@+id/sb_dev_addr"
+                style="@android:style/Widget.SeekBar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:max="8"
+                android:maxHeight="10dip"
+                android:minHeight="10dip"
+                android:paddingStart="5dp"
+                android:paddingLeft="5dp"
+                android:paddingTop="5dp"
+                android:paddingRight="5dp"
+                android:paddingBottom="10dp"
+                android:progress="-1"
+                android:progressDrawable="@color/colorPrimary"
+                android:theme="@android:style/Widget.SeekBar"
+                android:thumbTint="#00695C"
+                android:thumbTintMode="multiply"
+                app:tickMarkTint="#009688"
+                app:tickMarkTintMode="multiply" />
         </LinearLayout>
     </ScrollView>
 

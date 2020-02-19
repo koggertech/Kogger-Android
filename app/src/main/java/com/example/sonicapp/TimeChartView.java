@@ -454,9 +454,9 @@ class TimeChartView extends SurfaceView implements SurfaceHolder.Callback, Runna
             c.drawText(range_text, PosX + SizeX - WidthCurr - 10, PosY + SizeY - 10, paint);
         }
 
-        public void PushData(int data[], int resol, int offset) {
-            Offset_mm = offset;
-            Range_mm = data.length*resol + Offset_mm;
+        public void PushData(int data[], int resol, int sample_offset) {
+            Offset_mm = sample_offset*resol;
+            Range_mm = data.length*resol;
             Line[data_pos].AddRaw(data, resol, Offset_mm);
             last_push_index = data_pos;
 

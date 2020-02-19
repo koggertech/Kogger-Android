@@ -30,7 +30,7 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     static final short ID_BOOT = 0x24;
     static final short ID_FW_UPDATE = 0x25;
 
-    static final short ID_GNSS = 0x64;
+    static final short ID_NAV = 0x64;
 
 
     static final short Content = 1;
@@ -57,9 +57,9 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     KoggerSonicData_c Data;
 
     public interface InterfaceListenerChart {
-        void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data);
+        void ReceiveComplete(int sample_offset, int resolution_mm, int count_samples, short[] data);
         void ReceiveNew();
-        void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples);
+        void ReceiveSetting(int count_samples, int resolution_mm, int offset_samples);
         void ReceiveResponse(int code);
     }
 
@@ -78,6 +78,11 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         void ReceiveResponse(int code);
     }
 
+    public interface InterfaceListenerUART {
+        void ReceiveSetting(int ver);
+        void ReceiveResponse(int code);
+    }
+
 
     public interface InterfaceListenerAttitude {
         void ReceiveYPR(float ypr[]);
@@ -93,8 +98,10 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     InterfaceListenerChart ListenerChart;
     InterfaceListenerTransc ListenerTrance;
     InterfaceListenerSound ListenerSound;
+    InterfaceListenerUART ListenerUART;
     InterfaceListenerAttitude ListenerAttitude;
     InterfaceListenerLoadUpdate ListenerLoadUpdate;
+
 
 
     void SetListenerDataset(InterfaceListenerDataset listener) {
@@ -111,6 +118,10 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
 
     void SetListenerSound(InterfaceListenerSound listener) {
         ListenerSound = listener;
+    }
+
+    void SetListenerUART(InterfaceListenerUART listener) {
+        ListenerUART = listener;
     }
 
     void SetListenerLoadUpdate(InterfaceListenerLoadUpdate listener) {
@@ -132,13 +143,13 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         super(null);
 
         SetListenerChart(new InterfaceListenerChart() {
-            public void ReceiveComplete(long offset_mm, int resolution_mm, int count_samples, short[] data) {
+            public void ReceiveComplete(int sample_offset, int resolution_mm, int count_samples, short[] data) {
             }
 
             public void ReceiveNew() {
             }
 
-            public void ReceiveSetting(int count_samples, int resolution_mm, long offset_samples) {
+            public void ReceiveSetting(int count_samples, int resolution_mm, int offset_samples) {
             }
 
             public void ReceiveResponse(int code) {
@@ -181,6 +192,18 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
             }
         });
 
+        SetListenerUART(new InterfaceListenerUART() {
+            @Override
+            public void ReceiveSetting(int ver) {
+
+            }
+
+            @Override
+            public void ReceiveResponse(int code) {
+
+            }
+        });
+
         SetListenerLoadUpdate(new InterfaceListenerLoadUpdate() {
             @Override
             public void ReceiveResponse(int code) {
@@ -209,6 +232,21 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
             char len = 0;
             switch(ID) {
 
+                case ID_TIMESTAMP:
+                    if (Type == Getting) {
+                        len = 0;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
+
+                case ID_DIST:
+                    if (Type == Getting) {
+                        len = 0;
+                    } else {
+                        return LENGTH_ERROR;
+                    }
+                    break;
 
                 case ID_CHART:
                     if (Type == Getting) {
@@ -278,7 +316,12 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                     if (Type == Getting) {
                         len = 5;
                     } else if (Type == Setting) {
-                        len = 9;
+                        if(Version == 0) {
+                            len = 9;
+                        } else if(Version == 1) {
+                            len = 6;
+                        }
+
                     } else {
                         return LENGTH_ERROR;
                     }
@@ -300,7 +343,7 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                     }
                     break;
 
-                case ID_GNSS:
+                case ID_NAV:
                     if (Type == Content) {
                         len = 20;
                     } else {
@@ -323,27 +366,21 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     class KoggerSonicData_c {
         class ChartContent_c {
             final int MaxDist = 50000;
-            int AbsOffset = 0;
             int Size = 400;
             int Resol_mm = 10;
+            int SampleOffset;
             int Offset;
             short Data[] = new short[5000];
             short DataPos;
             Boolean DataComplete = false;
             Boolean SettingsUpdate = false;
 
-            void Set(ChartContent_c data) {
-                AbsOffset = data.AbsOffset;
-                Size = data.Size;
-                Resol_mm = data.Resol_mm;
+            void SetSampleOffset(int offset) {
+                SampleOffset = offset;
             }
 
-            void SetStartPos(int start_pos_mm) {
-                AbsOffset = start_pos_mm;
-            }
-
-            int GetAbsOffset() {
-                return AbsOffset;
+            int GetSampleOffset() {
+                return SampleOffset;
             }
 
             void SetResol(int resol_mm) {
@@ -372,7 +409,10 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
             }
 
             int GetMaxDist_mm() {
-                return Size*Resol_mm + AbsOffset;
+                return Size*Resol_mm + SampleOffset*Resol_mm;
+            }
+            int GetMinDist_mm() {
+                return SampleOffset*Resol_mm;
             }
 
             void SetOffset(int offset) {
@@ -402,15 +442,14 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                 return false;
             }
 
-            void InitData(int start_pos_mm, int offset, int resol_mm) {
-                SetStartPos(start_pos_mm);
+            void InitData(int sample_offset, int offset, int resol_mm) {
+                SetSampleOffset(sample_offset);
                 SetResol(resol_mm);
                 SetOffset(offset);
-//                DataPos = 0;
             }
 
-            void InitContent(int start_pos_mm, int size_chart, int resol_mm) {
-                SetStartPos(start_pos_mm);
+            void InitContent(int sample_offset, int size_chart, int resol_mm) {
+                SetSampleOffset(sample_offset);
                 SetResol(resol_mm);
                 SetSize(size_chart);
                 SettingsUpdate = true;
@@ -479,6 +518,7 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
 
         class UARTContent_c {
             long Baudrate = 115200;
+            int DevAddress = 0;
 
             void Set(long baudrate) {
                 Baudrate = baudrate;
@@ -693,7 +733,7 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                     }
 
                     if (Data.Chart.GetDataComlete()) {
-                        ListenerChart.ReceiveComplete(Data.Chart.AbsOffset, Data.Chart.Resol_mm,  Data.Chart.GetSize(), Data.Chart.Data);
+                        ListenerChart.ReceiveComplete(Data.Chart.SampleOffset, Data.Chart.Resol_mm,  Data.Chart.GetSize(), Data.Chart.Data);
                     }
                 } else return RespErrorVersion;
             } else return RespErrorType;
@@ -864,9 +904,11 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
     }
 
     protected void CallbackReceive_UART(int ver) {
+        ListenerUART.ReceiveSetting(ver);
     }
 
     protected void CallbackResp_UART(int code) {
+        ListenerUART.ReceiveResponse(code);
     }
 
     private int ParceUART() {
@@ -880,6 +922,18 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
                     long boudrate = In.ReadU4();
                     if (uart_key == CONFIRM_KEY) {
                         if (id == 1) Data.UART.Set((int) boudrate);
+                        CallbackReceive_UART(In.Ver);
+                    } else return RespErrorKey;
+                } else if(In.Ver == 1) {
+                    long uart_key = In.ReadU4();
+                    int id = In.ReadU1();
+                    int dev_addr = In.ReadU1();
+                    if (uart_key == CONFIRM_KEY) {
+                        if (id == 1) {
+                            Data.UART.DevAddress = dev_addr;
+                            Out.DevAddress = dev_addr;
+                        }
+
                         CallbackReceive_UART(In.Ver);
                     } else return RespErrorKey;
                 } else return RespErrorVersion;
@@ -905,18 +959,23 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         return RespOk;
     }
 
+    void RequestTimestamp() {
+        Out.New(new ProtoInst(ID_TIMESTAMP, Getting, 0, false));
+        Out.End();
+    }
+
     void RequestChart() {
-        Out.New(new ProtoInst(ID_CHART, Getting, 0, true));
+        Out.New(new ProtoInst(ID_CHART, Getting, 0, false));
         Out.End();
     }
 
     void RequstAttitudeInYPR() {
-        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 0, true));
+        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 0, false));
         Out.End();
     }
 
     void RequestAttitudeInQuat() {
-        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 1, true));
+        Out.New(new ProtoInst(ID_ATTITUDE, Getting, 1, false));
         Out.End();
     }
 
@@ -948,7 +1007,7 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         Out.New(new ProtoInst(ID_CHART_SETUP, Setting, 0, true));
         Out.WriteU2(Data.Chart.GetSize());
         Out.WriteU2(Data.Chart.GetResol());
-        Out.WriteU2(Data.Chart.GetAbsOffset());
+        Out.WriteU2(Data.Chart.GetSampleOffset());
         Out.End();
     }
 
@@ -983,11 +1042,6 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         Out.End();
     }
 
-    void SetSoundSpeed(int sound_speed_m_s) {
-        Data.SoundSpeed_m_s = sound_speed_m_s;
-        SendSoundSpeed();
-    }
-
     void SendUART() {
         Out.New(new ProtoInst(ID_UART, Setting, 0, true));
         Out.WriteU4(CONFIRM_KEY);
@@ -998,6 +1052,21 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
 
     void RequestUART() {
         Out.New(new ProtoInst(ID_UART, Getting, 0, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.WriteU1((short)0);
+        Out.End();
+    }
+
+    void SendUART_V1() {
+        Out.New(new ProtoInst(ID_UART, Setting, 1, true));
+        Out.WriteU4(CONFIRM_KEY);
+        Out.WriteU1((short)1);
+        Out.WriteU1((short)(Data.UART.DevAddress));
+        Out.End();
+    }
+
+    void RequestUART_V1() {
+        Out.New(new ProtoInst(ID_UART, Getting, 1, true));
         Out.WriteU4(CONFIRM_KEY);
         Out.WriteU1((short)0);
         Out.End();
@@ -1050,7 +1119,8 @@ class KoggerSonicBaseDriver_c extends ProtoSerial {
         RequestChartSetup();
         RequestTransc();
         RequestSoundSpeed();
-        RequestUART();
+//        RequestUART();
+        RequestUART_V1();
     }
 
     void SendAllSettings() {
